@@ -106,6 +106,19 @@ def _build_engines() -> tuple[AnalyzerEngine, AnonymizerEngine]:
             )
             registry.add_recognizer(ssn_recognizer)
             
+            # Add explicit US Address regex for common street address formats
+            # e.g., "123 Main St", "456 Oak Avenue Apt 2B"
+            address_pattern = Pattern(
+                name="address_pattern",
+                regex=r"\b\d+\s+[A-Za-z0-9\s.,-]{2,30}\b(?i:\s+(?:st|street|ave|avenue|rd|road|blvd|boulevard|ln|lane|dr|drive|ct|court|way|pl|place|sq|square|ter|terrace|pkwy|parkway|hwy|highway))\b",
+                score=0.75,
+            )
+            address_recognizer = PatternRecognizer(
+                supported_entity="LOCATION", # Map to the existing LOCATION entity type so tokens become <LOCATION_N>
+                patterns=[address_pattern],
+            )
+            registry.add_recognizer(address_recognizer)
+            
             analyzer = AnalyzerEngine(
                 registry=registry,
                 nlp_engine=nlp_engine,
