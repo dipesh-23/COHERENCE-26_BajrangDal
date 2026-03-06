@@ -250,25 +250,225 @@ def extract_inclusion_entities(text: str, nlp=None) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Quick smoke-tests
+# Exclusion Criteria Entity Extractor
+# ---------------------------------------------------------------------------
+
+# Known drug / substance patterns
+_DRUG_RE = re.compile(
+    r"\b(metformin|insulin(?:\s+\w+)?|aspirin|atorvastatin|lisinopril|"
+    r"warfarin|clopidogrel|glipizide|sitagliptin|empagliflozin|liraglutide|"
+    r"steroids?|corticosteroids?|immunosuppressants?|"
+    r"(?:\w+umab|\w+tinib|\w+mab|\w+pril|\w+sartan))\b",
+    re.IGNORECASE,
+)
+
+# Pregnancy / breastfeeding keywords
+_PREGNANCY_RE = re.compile(
+    r"\b(pregnan(?:t|cy)|breastfeeding|lactating?|nursing)\b",
+    re.IGNORECASE,
+)
+
+# Temporal pattern: "within the last N months/weeks/years"
+_TEMPORAL_RE = re.compile(
+    r"(?:history\s+of\s+)?(.+?)\s+within\s+(?:the\s+)?(?:last\s+)?(\d+)\s+(month|week|year)s?",
+    re.IGNORECASE,
+)
+
+# Sentence / clause splitter
+_CLAUSE_RE = re.compile(r"[.;]|\bexclusion criteria\s*:\s*", re.IGNORECASE)
+
+# Lab threshold pattern (catches "eGFR < 30", "creatinine > 1.5")
+_LAB_EXCL_RE = re.compile(
+    r"((?:[A-Za-z][\w\-]*)(?:\s+[\w\-]+){0,2})\s*(>=|<=|>|<|=)\s*([\d]+(?:\.[\d]+)?)"
+    r"\s*(%|mmol/L|mg/dL|mL/min(?:/1\.73\s*m²?)?|U/L|g/dL)?",
+    re.IGNORECASE,
+)
+
+_NOISE = re.compile(
+    r"\b(exclusion\s+criteria|known|history\s+of|current\s+use\s+of|"
+    r"use\s+of|patients?\s+with|women|men|subjects?|individuals?)\b",
+    re.IGNORECASE,
+)
+
+_TIME_NOISE = re.compile(
+    r"\b(month|week|day|year|for|on|per|at|least|most)\b",
+    re.IGNORECASE,
+)
+
+
+def _extract_forbidden_drugs(text: str, nlp=None) -> list:
+    """Extract drug names mentioned as exclusions using regex + NER."""
+    drugs = []
+
+    # Regex sweep
+    for m in _DRUG_RE.finditer(text):
+        d = m.group(1).strip()
+        if d.lower() not in [x.lower() for x in drugs]:
+            drugs.append(d)
+
+    # ScispaCy NER supplement
+    if nlp is not None:
+        doc = nlp(text)
+        for ent in doc.ents:
+            if _DRUG_RE.search(ent.text):
+                if ent.text.strip().lower() not in [x.lower() for x in drugs]:
+                    drugs.append(ent.text.strip())
+
+    return drugs
+
+
+def _extract_forbidden_conditions(text: str, nlp=None) -> list:
+    """
+    Extract condition/diagnosis strings using ScispaCy NER.
+    Falls back to clause-level heuristics when nlp is absent.
+    """
+    conditions = []
+
+    if nlp is not None:
+        doc = nlp(text)
+        for ent in doc.ents:
+            # Skip if it looks like a drug or a number
+            if _DRUG_RE.search(ent.text):
+                continue
+            if re.match(r"^\d", ent.text.strip()):
+                continue
+            cleaned = _NOISE.sub("", ent.text).strip(" ,.")
+            if len(cleaned) >= 4 and cleaned.lower() not in [c.lower() for c in conditions]:
+                conditions.append(cleaned)
+
+    return conditions
+
+
+def _extract_pregnancy_flag(text: str) -> bool:
+    """Return True if pregnancy / breastfeeding is mentioned as an exclusion."""
+    return bool(_PREGNANCY_RE.search(text))
+
+
+def _extract_prior_conditions(text: str) -> list:
+    """
+    Extract timed prior-condition clauses like
+    'myocardial infarction within the last 12 months'.
+    Returns list of {"condition": str, "within_months": int}.
+    """
+    results = []
+    for m in _TEMPORAL_RE.finditer(text):
+        condition   = m.group(1).strip(" ,.")
+        # Clean noise words from condition string
+        condition   = _NOISE.sub("", condition).strip(" ,.")
+        raw_n       = int(m.group(2))
+        unit        = m.group(3).lower()
+
+        # Normalise all to months
+        if unit.startswith("week"):
+            months = round(raw_n / 4.33)
+        elif unit.startswith("year"):
+            months = raw_n * 12
+        else:
+            months = raw_n
+
+        if len(condition) >= 4:
+            results.append({"condition": condition, "within_months": months})
+
+    return results
+
+
+def _extract_other_exclusions(text: str,
+                               forbidden_drugs: list,
+                               forbidden_conditions: list,
+                               prior_conditions: list) -> list:
+    """
+    Collect clauses not already captured by the structured extractors.
+    Splits on sentence boundaries and filters out already-matched content.
+    """
+    already_covered = set()
+    for d in forbidden_drugs:
+        already_covered.add(d.lower())
+    for c in forbidden_conditions:
+        already_covered.add(c.lower())
+    for p in prior_conditions:
+        already_covered.add(p["condition"].lower())
+
+    others = []
+    for clause in _CLAUSE_RE.split(text):
+        clause = clause.strip(" ,.")
+        if not clause or len(clause) < 8:
+            continue
+        clause_lower = clause.lower()
+
+        # Skip if clause is already captured
+        if any(covered in clause_lower for covered in already_covered):
+            continue
+        # Skip pregnancy (already flagged)
+        if _PREGNANCY_RE.search(clause):
+            continue
+        # Skip if it's just noisy header text
+        if re.fullmatch(r"exclusion criteria", clause, re.IGNORECASE):
+            continue
+
+        cleaned = _NOISE.sub("", clause).strip(" ,.")
+        if len(cleaned) >= 5:
+            others.append(cleaned)
+
+    return others
+
+
+def extract_exclusion_entities(text: str, nlp=None) -> dict:
+    """
+    Extract structured exclusion criteria from clinical trial text.
+
+    Parameters
+    ----------
+    text : str
+        Raw exclusion criteria text from a clinical trial.
+    nlp  : spacy.language.Language, optional
+        Pre-loaded ScispaCy pipeline. Improves condition/drug NER when provided.
+
+    Returns
+    -------
+    dict with keys:
+        forbidden_conditions : list[str]
+        forbidden_drugs      : list[str]
+        pregnancy_excluded   : bool
+        prior_conditions     : list[{"condition": str, "within_months": int}]
+        other_exclusions     : list[str]
+    """
+    forbidden_drugs      = _extract_forbidden_drugs(text, nlp)
+    forbidden_conditions = _extract_forbidden_conditions(text, nlp)
+    pregnancy_excluded   = _extract_pregnancy_flag(text)
+    prior_conditions     = _extract_prior_conditions(text)
+    other_exclusions     = _extract_other_exclusions(
+        text, forbidden_drugs, forbidden_conditions, prior_conditions
+    )
+
+    return {
+        "forbidden_conditions": forbidden_conditions,
+        "forbidden_drugs":      forbidden_drugs,
+        "pregnancy_excluded":   pregnancy_excluded,
+        "prior_conditions":     prior_conditions,
+        "other_exclusions":     other_exclusions,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Smoke-tests (run: conda activate clinical-nlp && python backend/modules/parser.py)
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
     import json
 
-    # ── Original pipeline smoke-test ─────────────────────────────────────────
+    pipeline = load_nlp_pipeline()
+
+    # ── Test 1: pipeline ──────────────────────────────────────────────────────
     TEST_SENTENCE = (
         "Patient must be 18-65 years old with HbA1c > 7% "
         "and diagnosed with Type 2 Diabetes (ICD E11.9)"
     )
     print("=" * 60)
-    print("SMOKE-TEST 1: load_nlp_pipeline + parse_clinical_text")
+    print("SMOKE-TEST 1: load_nlp_pipeline")
     print("=" * 60)
-    print("Input:", TEST_SENTENCE)
-    pipeline = load_nlp_pipeline()
     parse_clinical_text(TEST_SENTENCE, pipeline)
 
-    # ── extract_inclusion_entities test ──────────────────────────────────────
-    SAMPLE = (
+    # ── Test 2: inclusion extractor ───────────────────────────────────────────
+    INCL_SAMPLE = (
         "Patients aged 40-70 years, male or female, with Type 2 Diabetes "
         "Mellitus (ICD-10: E11.9), HbA1c greater than 7%, on metformin "
         "for at least 6 months."
@@ -276,8 +476,16 @@ if __name__ == "__main__":
     print("\n" + "=" * 60)
     print("SMOKE-TEST 2: extract_inclusion_entities")
     print("=" * 60)
-    print("Input:", SAMPLE)
-    result = extract_inclusion_entities(SAMPLE, nlp=pipeline)
-    print("\nExtracted entities:")
-    print(json.dumps(result, indent=2))
+    print(json.dumps(extract_inclusion_entities(INCL_SAMPLE, nlp=pipeline), indent=2))
 
+    # ── Test 3: exclusion extractor ───────────────────────────────────────────
+    EXCL_SAMPLE = (
+        "Exclusion criteria: Known hypersensitivity to metformin. "
+        "Current use of insulin therapy. Pregnant or breastfeeding women. "
+        "History of myocardial infarction within the last 12 months. "
+        "eGFR < 30 mL/min."
+    )
+    print("\n" + "=" * 60)
+    print("SMOKE-TEST 3: extract_exclusion_entities")
+    print("=" * 60)
+    print(json.dumps(extract_exclusion_entities(EXCL_SAMPLE, nlp=pipeline), indent=2))
