@@ -110,11 +110,18 @@ export default function MatchReport({
     onClose = () => { },
     report = null,      // TransparencyReport | null
     userRole = 'doctor',
+    onVerifyField = null,
 }) {
+    const [verifiedFields, setVerifiedFields] = useState([]);
+
     // Body scroll lock
     useEffect(() => {
-        if (isOpen) document.body.style.overflow = 'hidden';
-        else document.body.style.overflow = '';
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+            setVerifiedFields([]); // reset on close
+        }
         return () => { document.body.style.overflow = ''; };
     }, [isOpen]);
 
@@ -227,15 +234,80 @@ export default function MatchReport({
                             : verify.map((c, i) => <CriteriaRow key={i} c={c} isNurse={isNurse} isPatient={isPatient} />)
                         }
                         {report.missing_data?.length > 0 && (
-                            <div className="mt-3 bg-orange-50 border border-orange-100 rounded-lg px-4 py-3">
-                                <p className="text-orange-700 text-xs font-bold mb-1.5">
-                                    ⚠️ {isPatient ? 'Additional information needed:' : 'Missing Data:'}
-                                </p>
-                                <ul className="list-disc list-inside space-y-1">
-                                    {report.missing_data.map((d, i) => (
-                                        <li key={i} className="text-orange-600 text-xs">{d}</li>
-                                    ))}
-                                </ul>
+                            <div className="mt-4 border border-slate-100 rounded-xl overflow-hidden bg-white shadow-sm">
+                                {userRole === 'nurse' && (
+                                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-100">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <span className="text-xs text-slate-500 font-medium">Verification Progress</span>
+                                            <span className="text-xs font-bold text-teal-600">
+                                                {verifiedFields.length} / {report.missing_data.length} verified
+                                            </span>
+                                        </div>
+                                        <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                                            <div
+                                                className="bg-gradient-to-r from-teal-400 to-teal-600 h-2 transition-all duration-500"
+                                                style={{
+                                                    width: `${(verifiedFields.length / report.missing_data.length) * 100}%`
+                                                }}
+                                            />
+                                        </div>
+                                        {verifiedFields.length === report.missing_data.length && (
+                                            <p className="text-teal-600 text-[11px] font-bold mt-1.5 text-center animate-pulse">
+                                                ✅ All fields verified — ready for enrollment
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+                                <div className="p-1 space-y-1">
+                                    {report.missing_data.map((field, index) => {
+                                        const isVerified = verifiedFields.includes(field);
+                                        return (
+                                            <div
+                                                key={index}
+                                                className={`flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-300 ${isVerified
+                                                    ? 'bg-teal-50 border border-teal-200'
+                                                    : 'bg-amber-50 border border-amber-100'
+                                                    }`}
+                                            >
+                                                <div className="flex items-center gap-2 pr-4">
+                                                    <span className="text-sm shrink-0">
+                                                        {isVerified ? '✅' : '⚠️'}
+                                                    </span>
+                                                    <span className={`text-sm font-medium leading-tight ${isVerified ? 'text-teal-700 line-through opacity-60' : 'text-amber-800'}`}>
+                                                        {field}
+                                                    </span>
+                                                </div>
+                                                {userRole === 'nurse' && (
+                                                    <button
+                                                        onClick={() => {
+                                                            if (!isVerified) {
+                                                                setVerifiedFields(prev => [...prev, field]);
+                                                                if (onVerifyField) onVerifyField(report.patient_id, field);
+                                                            }
+                                                        }}
+                                                        disabled={isVerified}
+                                                        className={`shrink-0 rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide transition-all duration-200 shadow-sm ${isVerified
+                                                            ? 'bg-teal-200/50 text-teal-600 cursor-not-allowed shadow-none'
+                                                            : 'bg-teal-500 text-white hover:bg-teal-600 hover:shadow-teal-200 active:scale-95'
+                                                            }`}
+                                                    >
+                                                        {isVerified ? '✓ Verified' : 'Mark Verified ✓'}
+                                                    </button>
+                                                )}
+                                                {userRole === 'doctor' && (
+                                                    <span className="shrink-0 text-[10px] text-slate-400 italic font-medium bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
+                                                        Contact GP →
+                                                    </span>
+                                                )}
+                                                {userRole === 'patient' && (
+                                                    <span className="shrink-0 text-[10px] text-amber-600 italic font-medium bg-amber-100/50 px-2 py-1 rounded-md border border-amber-200/50">
+                                                        Pending Doctor
+                                                    </span>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         )}
                     </Section>
