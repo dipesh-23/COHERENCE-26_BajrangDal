@@ -435,21 +435,56 @@ export default function TrialDetail({
 
                     {/* EXCLUSIONS (Doctor/Nurse) */}
                     {isClinical && (
-                        <div className="bg-white rounded-2xl shadow-sm border border-teal-50 p-5">
+                        <div className="bg-white rounded-2xl shadow-sm border border-teal-50 p-5 mt-2">
                             <h3 className="text-slate-700 font-bold text-sm flex items-center gap-2 mb-3">
                                 <span>🚫</span> Exclusion Criteria Checks
                             </h3>
-                            {exclusions.length === 0 ? (
-                                <div className="bg-teal-50 border border-teal-100 rounded-xl px-4 py-3 text-sm text-teal-700 font-medium flex items-center gap-2">
-                                    <span className="text-lg">✅</span> All Clear — No exclusionary conditions detected.
+                            {exclusions.length > 0 ? (
+                                <div className="bg-white rounded-2xl shadow-sm border-2 border-red-200 overflow-hidden">
+                                    {/* Dramatic header banner */}
+                                    <div className="bg-gradient-to-r from-red-600 to-red-700 px-5 py-4 flex items-center gap-3">
+                                        <span className="text-2xl">🚫</span>
+                                        <div>
+                                            <p className="text-white font-bold text-base">Exclusion Criteria Flagged</p>
+                                            <p className="text-red-200 text-xs mt-0.5">
+                                                {report.exclusion_flags.length} hard exclusion{report.exclusion_flags.length > 1 ? 's' : ''} detected by rule-based engine — enrollment not possible
+                                            </p>
+                                        </div>
+                                        <div className="ml-auto bg-red-500 shadow-inner text-white text-xs font-bold px-3 py-1.5 rounded-full border border-red-400">
+                                            NOT SUITABLE
+                                        </div>
+                                    </div>
+                                    {/* Flag list */}
+                                    <div className="p-4 space-y-3 bg-[#FDF2F2]">
+                                        {report.exclusion_flags.map((flag, index) => (
+                                            <div
+                                                key={index}
+                                                className="flex items-start gap-3 bg-red-50 border border-red-100 rounded-xl px-4 py-3 shadow-sm"
+                                                style={{ animationDelay: `${index * 100}ms`, animation: `fadeSlideUp 300ms ease-out both` }}
+                                            >
+                                                <span className="text-red-500 text-lg flex-shrink-0 mt-0.5">⛔</span>
+                                                <div>
+                                                    <p className="text-red-800 font-bold text-sm">Hard Exclusion #{index + 1}</p>
+                                                    <p className="text-red-600 text-xs mt-0.5 leading-relaxed">{flag}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {/* Footer note */}
+                                    <div className="bg-red-100/50 border-t border-red-100 px-5 py-3">
+                                        <p className="text-red-600 text-[11px] font-semibold flex items-center gap-2">
+                                            <span>🔒</span>
+                                            These exclusions are binary rule-based decisions and cannot be overridden by verification or additional documentation.
+                                        </p>
+                                    </div>
                                 </div>
                             ) : (
-                                <div className="flex flex-col gap-2">
-                                    {exclusions.map((ex, idx) => (
-                                        <div key={idx} className="bg-red-50 border border-red-100 rounded-xl px-4 py-3 text-sm text-red-800 font-medium flex items-start gap-2">
-                                            <span className="mt-0.5">✗</span> {ex}
-                                        </div>
-                                    ))}
+                                <div className="bg-teal-50 border border-teal-200 rounded-2xl px-5 py-4 flex items-center gap-3">
+                                    <span className="text-2xl">✅</span>
+                                    <div>
+                                        <p className="text-teal-800 font-bold text-sm">All Clear — No Exclusions Triggered</p>
+                                        <p className="text-teal-600 text-xs mt-0.5">Patient cleared all exclusion criteria for this trial.</p>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -522,6 +557,39 @@ export default function TrialDetail({
                                     ⚠️ Generated by AI — always consult your doctor.
                                 </span>
                             )}
+                        </div>
+                    </div>
+
+                    {/* Enhanced recommendation block */}
+                    <div className={`rounded-2xl p-5 flex items-center gap-4 ${report.recommendation === 'Proceed'
+                        ? 'bg-gradient-to-r from-teal-500 to-teal-600 shadow-lg shadow-teal-200'
+                        : report.recommendation === 'Verify First'
+                            ? 'bg-gradient-to-r from-amber-400 to-amber-500 shadow-lg shadow-amber-200'
+                            : 'bg-gradient-to-r from-red-500 to-red-700 shadow-lg shadow-red-200'
+                        }`}>
+                        <span className="text-4xl flex-shrink-0">
+                            {report.recommendation === 'Proceed' ? '🎯'
+                                : report.recommendation === 'Verify First' ? '🔍'
+                                    : '🚫'}
+                        </span>
+                        <div className="flex-1">
+                            <p className="text-white font-bold text-lg">
+                                {report.recommendation === 'Proceed'
+                                    ? 'Proceed to Enrollment Inquiry'
+                                    : report.recommendation === 'Verify First'
+                                        ? 'Verify Fields Before Proceeding'
+                                        : 'Not Suitable — Hard Exclusion Active'}
+                            </p>
+                            <p className="text-white/80 text-sm mt-0.5 leading-relaxed">
+                                {report.recommendation === 'Proceed'
+                                    ? 'Patient meets all required criteria. Review and proceed.'
+                                    : report.recommendation === 'Verify First'
+                                        ? 'Confirm missing fields with GP before enrollment inquiry.'
+                                        : 'Rule-based engine detected a hard safety exclusion. See flags above.'}
+                            </p>
+                        </div>
+                        <div className="bg-white/20 rounded-full px-5 py-2 text-white text-sm font-bold border border-white/30 flex-shrink-0 shadow-inner">
+                            {report.match_score} / 100
                         </div>
                     </div>
 
