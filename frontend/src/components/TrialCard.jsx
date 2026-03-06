@@ -95,6 +95,7 @@ export default function TrialCard({
     phase = 'Phase III',
     sponsor = 'Sponsor',
     location = '—',
+    distance_string = null,
     hpsa_flagged = false,
     criteria_breakdown = [],
     missing_data = [],
@@ -183,13 +184,17 @@ export default function TrialCard({
                 )}
                 {isPatient ? (
                     <>
-                        <span className="text-slate-400 text-xs">📍 {location}</span>
+                        <span className="text-slate-400 text-xs">
+                            📍 {location} {distance_string && <span className="font-semibold text-teal-600">({distance_string})</span>}
+                        </span>
                         <span className="text-slate-400 text-xs">🧪 {phase}</span>
                     </>
                 ) : (
                     <>
                         <span className="text-slate-400 text-xs" title={sponsor}>🏢 {truncate(sponsor, 22)}</span>
-                        <span className="text-slate-400 text-xs">📍 {location}</span>
+                        <span className="text-slate-400 text-xs">
+                            📍 {location} {distance_string && <span className="font-semibold text-teal-600">({distance_string})</span>}
+                        </span>
                     </>
                 )}
             </div>

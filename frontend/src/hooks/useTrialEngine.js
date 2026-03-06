@@ -10,6 +10,186 @@ const API_BASE =
 const INIT_LOADING = { upload: null, match: null, report: null, verify: null, feedback: null };
 const INIT_ERRORS = { upload: null, match: null, report: null, verify: null, feedback: null };
 
+// ── Perfect Hackathon Demo Data ───────────────────────────────────────────────
+const DEMO_PATIENT = {
+    patient_id: "P-84921",
+    age: 62,
+    gender: "Female",
+    zip: "10029",
+    diagnoses: [
+        "Type 2 Diabetes Mellitus (ICD E11.9)",
+        "Stage 3a Chronic Kidney Disease (ICD N18.31)",
+        "Essential Hypertension (ICD I10)"
+    ],
+    medications: [
+        "Metformin 1000mg (twice daily)",
+        "Lisinopril 10mg (once daily)",
+        "Atorvastatin 40mg (once daily)"
+    ],
+    labs: {
+        HbA1c: 8.4,
+        eGFR: 48,
+        Creatinine: 1.4
+    },
+    history_text: "[REDACTED] 62yo F presents with poorly controlled T2DM. Current regimen insufficient. Recent labs show declining renal function. Patient resides in East Harlem (HPSA-designated ZIP 10029). Candidate for advanced therapy escalation."
+};
+
+const DEMO_RESULTS = [
+    {
+        patient_id: "P-84921",
+        trial_id: "NCT-2026-EMBARK-001",
+        trial_name: "EMBARK-T2DM Phase III",
+        match_score: 92,
+        confidence: "HIGH",
+        phase: "Phase III",
+        sponsor: "NovaBiomed Inc.",
+        location: "Mount Sinai Hospital, New York, NY",
+        distance_string: "4 miles away",
+        hpsa_flagged: false,
+        criteria_breakdown: [
+            {
+                name: "Age 45–70",
+                status: "met",
+                detail: "Patient age 62 falls within the required range of 45 to 70 years."
+            },
+            {
+                name: "T2DM Diagnosis (ICD E11.9)",
+                status: "met",
+                detail: "Confirmed Type 2 Diabetes Mellitus diagnosis on record."
+            },
+            {
+                name: "HbA1c ≥ 7.5%",
+                status: "met",
+                detail: "Patient HbA1c of 8.4% exceeds the minimum threshold of 7.5%."
+            },
+            {
+                name: "Active Metformin Use",
+                status: "met",
+                detail: "Metformin 1000mg is listed as an active medication."
+            },
+            {
+                name: "eGFR ≥ 45 mL/min",
+                status: "verify",
+                detail: "Patient eGFR is 48 mL/min, marginally above the threshold of 45. Lab confirmation within 30 days required before enrollment."
+            },
+            {
+                name: "No Prior GLP-1 Agonist Use",
+                status: "met",
+                detail: "No GLP-1 agonist medications found in the patient's medication history."
+            }
+        ],
+        missing_data: ["eGFR lab confirmation within 30 days"],
+        exclusion_flags: [],
+        recommendation: "Proceed",
+        narrative_text: "Patient P-84921 is a strong candidate for the EMBARK-T2DM Phase III trial.",
+        llm_explanation: "This 62-year-old female with poorly controlled Type 2 Diabetes (HbA1c 8.4%) and active Metformin therapy aligns precisely with the EMBARK-T2DM primary inclusion profile. Her age of 62 sits comfortably within the 45–70 window, and the absence of prior GLP-1 agonist use makes her an ideal candidate for this investigational agent. The single item requiring verification is her eGFR value of 48 mL/min — while this exceeds the trial threshold of 45, the protocol requires a confirmed lab result dated within 30 days of enrollment. A GP-requested lab confirmation would resolve this and elevate confidence to maximum. Overall clinical profile: STRONG MATCH. Recommend proceeding to enrollment inquiry with renal lab verification."
+    },
+    {
+        patient_id: "P-84921",
+        trial_id: "NCT-2026-RENAL-002",
+        trial_name: "Renal-Protect Urban Outcomes",
+        match_score: 78,
+        confidence: "MEDIUM",
+        phase: "Phase II",
+        sponsor: "Urban Health Consortium",
+        location: "Harlem Hospital Center, New York, NY",
+        distance_string: "1.2 miles away",
+        hpsa_flagged: true,
+        criteria_breakdown: [
+            {
+                name: "Stage 3 CKD (eGFR 30–59)",
+                status: "met",
+                detail: "Patient eGFR of 48 mL/min places them in Stage 3a CKD, matching this criterion exactly."
+            },
+            {
+                name: "Hypertension Diagnosis",
+                status: "met",
+                detail: "Essential Hypertension (ICD I10) confirmed on patient record."
+            },
+            {
+                name: "ACE Inhibitor or ARB Use",
+                status: "met",
+                detail: "Lisinopril 10mg (ACE inhibitor) is an active medication."
+            },
+            {
+                name: "Urban HPSA Resident",
+                status: "met",
+                detail: "Patient ZIP 10029 (East Harlem) is a federally designated Health Professional Shortage Area."
+            },
+            {
+                name: "No Active Malignancy",
+                status: "verify",
+                detail: "No cancer history recorded, but formal oncology clearance not documented. Verification recommended."
+            },
+            {
+                name: "Proteinuria Confirmed",
+                status: "verify",
+                detail: "Urine albumin-to-creatinine ratio (UACR) not present in current record. Required for enrollment."
+            }
+        ],
+        missing_data: [
+            "Oncology clearance documentation",
+            "Urine albumin-to-creatinine ratio (UACR)"
+        ],
+        exclusion_flags: [],
+        recommendation: "Verify First",
+        narrative_text: "Patient shows strong alignment with urban CKD outcomes trial, pending two verification items.",
+        llm_explanation: "The Renal-Protect Urban Outcomes trial was specifically designed for patients matching this profile — urban-dwelling individuals with Stage 3 CKD, hypertension, and active renin-angiotensin system blockade. Patient P-84921 satisfies all four primary inclusion criteria. The HPSA designation of her East Harlem ZIP code (10029) also triggers an equity-based priority weighting in our scoring model, reflecting the trial's focus on underserved urban populations. Two items remain unverified: a urine albumin-to-creatinine ratio (UACR) which is standard pre-enrollment renal workup, and a formal oncology clearance statement. Both are routine documentation requests. If verified, this trial could be elevated to HIGH confidence. The geographic proximity of 1.2 miles to Harlem Hospital Center further strengthens the case for patient engagement."
+    },
+    {
+        patient_id: "P-84921",
+        trial_id: "NCT-2026-GLP1-003",
+        trial_name: "GLP-1 Aggressive Titration Study",
+        match_score: 42,
+        confidence: "HIGH",
+        phase: "Phase II",
+        sponsor: "EndoTherapeutics Corp.",
+        location: "NYU Langone Medical Center, New York, NY",
+        distance_string: "5.8 miles away",
+        hpsa_flagged: false,
+        criteria_breakdown: [
+            {
+                name: "Age 40–75",
+                status: "met",
+                detail: "Patient age 62 is within the acceptable age range."
+            },
+            {
+                name: "T2DM Diagnosis",
+                status: "met",
+                detail: "Type 2 Diabetes Mellitus confirmed."
+            },
+            {
+                name: "HbA1c ≥ 8.0%",
+                status: "met",
+                detail: "Patient HbA1c of 8.4% meets the minimum threshold."
+            },
+            {
+                name: "eGFR ≥ 60 mL/min (Safety Threshold)",
+                status: "unmet",
+                detail: "Patient eGFR of 48 mL/min is BELOW the mandatory safety threshold of 60 mL/min. GLP-1 aggressive titration carries nephrotoxicity risk in patients with eGFR < 60. This is a hard exclusion."
+            },
+            {
+                name: "No Metformin Contraindication",
+                status: "met",
+                detail: "Patient is actively tolerating Metformin without documented contraindication."
+            },
+            {
+                name: "No Prior GLP-1 Exposure",
+                status: "met",
+                detail: "No GLP-1 agonist found in medication history."
+            }
+        ],
+        missing_data: [],
+        exclusion_flags: [
+            "eGFR 48 mL/min is below the mandatory safety threshold of 60 mL/min — nephrotoxicity risk at aggressive GLP-1 titration doses",
+            "Stage 3a CKD diagnosis conflicts with protocol safety requirements for renal clearance"
+        ],
+        recommendation: "Not Suitable",
+        narrative_text: "Despite meeting age and glycemic criteria, patient is excluded due to renal safety threshold violation.",
+        llm_explanation: "Patient P-84921 meets the glycemic and demographic criteria for the GLP-1 Aggressive Titration Study — her HbA1c of 8.4% and T2DM diagnosis are directly on target. However, the trial protocol contains a hard safety exclusion for patients with eGFR below 60 mL/min due to the nephrotoxicity risk associated with aggressive GLP-1 titration in renally impaired patients. With an eGFR of 48 mL/min, this patient falls into Stage 3a CKD and cannot safely participate under current protocol. This exclusion is binary and cannot be overridden by verification or additional documentation. The rule-based engine flagged this immediately. Recommendation: NOT SUITABLE. However, the EMBARK-T2DM trial (Trial 1) represents a far safer and equally appropriate alternative for this patient's glycemic management needs."
+    }
+];
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function authHeaders(token) {
     return {
@@ -210,19 +390,54 @@ export function useTrialEngine(token = null) {
     }, [token, setError, setLoading, clearLoading]);
 
     // ══════════════════════════════════════════════════════════════════════════
-    // toggleDemoMode — flips isDemoMode, updates banner message
+    // loadDemoData — Stage simulated loading process and set mock state
+    // ══════════════════════════════════════════════════════════════════════════
+    const loadDemoData = useCallback(() => {
+        // Simulate staged loading experience even in demo mode
+        setLoadingStatus(prev => ({ ...prev, upload: 'Parsing record...' }));
+        setTimeout(() => {
+            setLoadingStatus(prev => ({ ...prev, upload: 'Anonymizing PHI via Presidio...' }));
+        }, 600);
+        setTimeout(() => {
+            setLoadingStatus(prev => ({ ...prev, upload: 'Validating schema...' }));
+        }, 1200);
+        setTimeout(() => {
+            setPatientData(DEMO_PATIENT);
+            setLoadingStatus(prev => ({ ...prev, upload: null }));
+        }, 1800);
+
+        // Simulate match loading after patient loads
+        setTimeout(() => {
+            setLoadingStatus(prev => ({ ...prev, match: 'Finding matching trials...' }));
+        }, 2000);
+        setTimeout(() => {
+            setMatchResults(DEMO_RESULTS);
+            setLoadingStatus(prev => ({ ...prev, match: null }));
+        }, 3200);
+    }, []);
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // toggleDemoMode — flips isDemoMode, updates banner message, and loads data
     // ══════════════════════════════════════════════════════════════════════════
     const toggleDemoMode = useCallback(() => {
         setIsDemoMode(prev => {
             const next = !prev;
-            setDemoModeBanner(
-                next
-                    ? '⚡ Demo Mode — Connect your backend to use real patient data'
-                    : null
-            );
+            if (next) {
+                loadDemoData();
+                setDemoModeBanner('⚡ Demo Mode — Using simulated patient data');
+            } else {
+                // Must be inside the setIsDemoMode callback or wrapped properly?
+                // Actually, clearAll is outside, but it's safe to call here since it sets other state.
+                setPatientData(null);
+                setMatchResults([]);
+                setReportData(null);
+                setLoadingStatus(INIT_LOADING);
+                setErrors(INIT_ERRORS);
+                setDemoModeBanner(null);
+            }
             return next;
         });
-    }, []);
+    }, [loadDemoData]);
 
     // ══════════════════════════════════════════════════════════════════════════
     // clearAll — resets all state to initial
