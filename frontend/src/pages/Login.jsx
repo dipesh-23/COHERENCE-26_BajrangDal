@@ -8,10 +8,10 @@ const API_BASE = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_AP
 // ─── Role config ──────────────────────────────────────────────────────────────
 const ROLES = [
     {
-        key: 'doctor',
-        label: 'Doctor',
-        emoji: '👨‍⚕️',
-        access: 'Full Access',
+        key: 'crc',
+        label: 'Research Coordinator',
+        emoji: '🔬',
+        access: 'Screen & match patients',
         color: '#0D9488',
         gradient: 'from-[#0D9488] to-[#0F766E]',
         shadow: 'shadow-[#0D9488]/30',
@@ -19,15 +19,16 @@ const ROLES = [
         border: 'border-[#0D9488]',
         bg: 'bg-[#0D9488]/5',
         text: 'text-[#0D9488]',
-        btnText: 'Sign In as Doctor',
-        welcome: 'Welcome back, Doctor',
-        subtitle: 'Access the full Clinical Trial Matching Engine',
+        btnText: 'Sign In to Screening Dashboard',
+        welcome: 'Welcome back, Coordinator',
+        subtitle: 'Your patient screening dashboard awaits',
+        emailPlaceholder: 'coordinator@research.org'
     },
     {
-        key: 'nurse',
-        label: 'Nurse',
-        emoji: '👩‍⚕️',
-        access: 'Clinical Access',
+        key: 'investigator',
+        label: 'Investigator',
+        emoji: '👨‍⚕️',
+        access: 'Review & approve matches',
         color: '#0F766E',
         gradient: 'from-[#0F766E] to-[#065F46]',
         shadow: 'shadow-[#0F766E]/30',
@@ -35,15 +36,16 @@ const ROLES = [
         border: 'border-[#0F766E]',
         bg: 'bg-[#0F766E]/5',
         text: 'text-[#0F766E]',
-        btnText: 'Sign In as Nurse',
-        welcome: 'Welcome back',
-        subtitle: 'View patient matches and trial details',
+        btnText: 'Sign In to Review Portal',
+        welcome: 'Welcome back, Investigator',
+        subtitle: 'Review matched patient recommendations',
+        emailPlaceholder: 'pi@clinicaltrial.org'
     },
     {
         key: 'patient',
         label: 'Patient',
         emoji: '🧑‍🦽',
-        access: 'Patient Portal',
+        access: 'My trial matches',
         color: '#14B8A6',
         gradient: 'from-[#14B8A6] to-[#0D9488]',
         shadow: 'shadow-[#14B8A6]/30',
@@ -51,9 +53,10 @@ const ROLES = [
         border: 'border-[#14B8A6]',
         bg: 'bg-[#14B8A6]/5',
         text: 'text-[#14B8A6]',
-        btnText: 'Sign In to My Portal',
+        btnText: 'View My Trial Matches',
         welcome: 'Find Your Clinical Trials',
-        subtitle: 'Discover trials matched to your health profile',
+        subtitle: 'See which trials you may qualify for',
+        emailPlaceholder: 'patient@email.com'
     },
 ];
 
@@ -63,16 +66,16 @@ function demoUser(role) {
         token: 'demo-token',
         user: {
             id: 'U-DEMO',
-            name: role === 'doctor' ? 'Dr. Sarah Chen' : role === 'nurse' ? 'Nurse Jamie Rivera' : 'Demo Patient',
+            name: role === 'crc' ? 'Coordinator Jane Smith' : role === 'investigator' ? 'Dr. Sarah Chen' : 'Demo Patient',
             role,
-            department: role === 'doctor' ? 'Endocrinology' : role === 'nurse' ? 'Oncology' : 'Patient',
+            department: role === 'crc' ? 'Clinical Trials Office' : role === 'investigator' ? 'Endocrinology' : 'Patient',
             hospital: 'Mount Sinai Medical Center',
         },
     };
 }
 
 export default function Login({ onLoginSuccess = () => { } }) {
-    const [selectedRole, setSelectedRole] = useState('doctor');
+    const [selectedRole, setSelectedRole] = useState('crc');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPass, setShowPass] = useState(false);
@@ -164,13 +167,13 @@ export default function Login({ onLoginSuccess = () => { } }) {
                 {/* Hero center */}
                 <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-12 text-center">
                     <h1 className="text-white font-bold text-4xl leading-tight max-w-sm">
-                        A Great Place to Match Clinical Trials
+                        Screen Patients. Match Trials. Save Hours.
                     </h1>
-                    <p className="text-white/75 text-base mt-3 max-w-sm">
-                        AI-powered eligibility matching helping you discover the right trials
+                    <p className="text-white/75 text-base mt-3 max-w-md">
+                        Replace manual eligibility screening with AI-powered matching. Every patient. Every trial. Every criterion — explained.
                     </p>
                     <button className="mt-6 bg-white/20 hover:bg-white/30 text-white border border-white/40 rounded-full px-8 py-3 text-base font-semibold backdrop-blur-sm transition-all duration-200 hover:scale-[1.03]">
-                        Get Started →
+                        Start Screening →
                     </button>
 
                     {/* Doctor team avatars */}
@@ -190,9 +193,9 @@ export default function Login({ onLoginSuccess = () => { } }) {
                 {/* Bottom stats */}
                 <div className="relative z-10 flex items-center justify-around px-8 pb-10">
                     {[
-                        { value: '500+', label: 'Active Trials' },
-                        { value: '99%', label: 'Match Accuracy' },
-                        { value: '98%', label: 'Satisfaction' },
+                        { value: '8hrs', label: 'Saved Per Patient' },
+                        { value: '99%', label: 'Screening Accuracy' },
+                        { value: '3x', label: 'Faster Enrollment' },
                     ].map(stat => (
                         <div key={stat.value} className="flex flex-col items-center">
                             <div className="w-16 h-16 rounded-full border-4 border-white/40 bg-white/10 flex flex-col items-center justify-center backdrop-blur-sm">
@@ -250,7 +253,7 @@ export default function Login({ onLoginSuccess = () => { } }) {
                                 type="email"
                                 value={email}
                                 onChange={e => setEmail(e.target.value)}
-                                placeholder="doctor@hospital.org"
+                                placeholder={role.emailPlaceholder}
                                 className={`w-full bg-white border-2 rounded-xl px-4 py-3 text-slate-800 placeholder-slate-300 outline-none transition-all duration-200 shadow-sm focus:ring-4
                   ${email && !validEmail ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : `border-slate-100 focus:border-[${role.color}] ${role.ring}`}`}
                             />
@@ -320,9 +323,29 @@ export default function Login({ onLoginSuccess = () => { } }) {
                         ⚡ Continue with Demo Mode
                     </button>
 
-                    {/* ── 8. Bottom notice ── */}
-                    <p className="text-slate-300 text-xs text-center mt-6">
-                        🔒 HIPAA-compliant · All patient data anonymized · No PHI transmitted
+                    {/* ── 8. Bottom notice & CRC specific UI ── */}
+                    {selectedRole === 'crc' && (
+                        <div className="mt-4 bg-teal-50 border border-teal-100 rounded-2xl p-4 w-full">
+                            <p className="text-teal-700 font-semibold text-xs uppercase tracking-wide mb-2">
+                                Built for Research Coordinators
+                            </p>
+                            <div className="space-y-1.5">
+                                {[
+                                    '⚡ Screen a patient in 90 seconds instead of 3 hours',
+                                    '📋 Every inclusion/exclusion criterion explained automatically',
+                                    '🗺️ Filter trials by distance from patient ZIP code',
+                                    '⚖️ Bias alerts flag trials that unfairly exclude patients'
+                                ].map((item, i) => (
+                                    <p key={i} className="text-teal-600 text-[11px] font-medium flex items-start gap-2">
+                                        <span className="flex-shrink-0">{item.split(' ')[0]}</span>
+                                        <span>{item.split(' ').slice(1).join(' ')}</span>
+                                    </p>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    <p className="text-slate-400 text-[11px] text-center mt-6">
+                        🔒 HIPAA-compliant · All patient records anonymized before processing · No PHI transmitted to AI models
                     </p>
                 </div>
             </div>
