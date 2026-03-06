@@ -563,6 +563,47 @@ def build_logic_tree(inclusion_entities: dict, exclusion_entities: dict) -> dict
 
 
 # ---------------------------------------------------------------------------
+# Master Parsing Function
+# ---------------------------------------------------------------------------
+
+def parse_trial_criteria(trial_id: str, raw_inclusion_text: str, raw_exclusion_text: str, nlp=None) -> dict:
+    """
+    Complete NLP pipeline to extract and structure clinical trial criteria.
+    Returns the final CriteriaJSON dictionary matching the API contract.
+    """
+    if nlp is None:
+        nlp = load_nlp_pipeline()
+
+    # 1. Extract entities
+    incl_entities = extract_inclusion_entities(raw_inclusion_text, nlp=nlp)
+    excl_entities = extract_exclusion_entities(raw_exclusion_text, nlp=nlp)
+
+    # 2. Build logic tree
+    logic_tree = build_logic_tree(incl_entities, excl_entities)
+
+    # 3. Extract purely structured numeric thresholds for quick filtering
+    thresholds = {}
+    for lab in incl_entities.get("lab_values", []):
+        thresholds[lab["lab"]] = {"operator": lab["operator"], "value": lab["value"], "unit": lab.get("unit", "")}
+
+    # 4. Construct final API payload
+    return {
+        "trial_id": trial_id,
+        "inclusion": logic_tree["inclusion"]["conditions"],
+        "exclusion": logic_tree["exclusion"]["conditions"],
+        "logic": {
+            "inclusion_operator": logic_tree["inclusion"]["logic"],
+            "exclusion_operator": logic_tree["exclusion"]["logic"]
+        },
+        "thresholds": thresholds,
+        "raw_text": {
+            "inclusion": raw_inclusion_text,
+            "exclusion": raw_exclusion_text
+        }
+    }
+
+
+# ---------------------------------------------------------------------------
 # Smoke-tests (run: conda activate clinical-nlp && python backend/modules/parser.py)
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
@@ -611,4 +652,12 @@ if __name__ == "__main__":
     print("=" * 60)
     logic_tree = build_logic_tree(incl_res, excl_res)
     print(json.dumps(logic_tree, indent=2))
+
+    # ── Test 5: master parse_trial_criteria ───────────────────────────────────
+    print("\n" + "=" * 60)
+    print("SMOKE-TEST 5: parse_trial_criteria")
+    print("=" * 60)
+    final_payload = parse_trial_criteria("NCT12345678", INCL_SAMPLE, EXCL_SAMPLE, nlp=pipeline)
+    print(json.dumps(final_payload, indent=2))
+
 
