@@ -216,7 +216,7 @@ export default function Dashboard({
                         <span className="text-slate-500 font-bold text-xs uppercase tracking-wider pl-1">📁 Upload Patient Record</span>
                         <PatientUploader
                             onPatientLoaded={handlePatientLoaded}
-                            userRole={currentUser?.role || 'doctor'}
+                            userRole={currentUser?.role || 'crc'}
                         />
                     </div>
 
@@ -322,7 +322,7 @@ export default function Dashboard({
                                                 <div key={result.trial_id} className="anim-fade-up" style={{ animationDelay: `${index * 80}ms` }}>
                                                     <TrialCard
                                                         {...result}
-                                                        userRole={currentUser?.role || 'doctor'}
+                                                        userRole={currentUser?.role || 'crc'}
                                                         isSelected={selectedTrial?.trial_id === result.trial_id}
                                                         onSelect={() => setSelectedTrial(result)}
                                                         onViewReport={() => { setSelectedTrial(result); setIsReportOpen(true); }}
@@ -458,7 +458,7 @@ export default function Dashboard({
                     {/* ScoreGauge — shown when a trial is selected */}
                     {selectedTrial ? (
                         <div className="anim-fade-up">
-                            <ScoreGauge score={selectedTrial.match_score} breakdown={derivedBreakdown} userRole={currentUser?.role || 'doctor'} />
+                            <ScoreGauge score={selectedTrial.match_score} breakdown={derivedBreakdown} userRole={currentUser?.role || 'crc'} />
                         </div>
                     ) : (
                         <div className="border border-teal-100 bg-[#F0FAFA] rounded-2xl p-6 text-center shadow-inner">
@@ -517,7 +517,7 @@ export default function Dashboard({
                 isOpen={isReportOpen}
                 onClose={() => setIsReportOpen(false)}
                 report={selectedTrial}
-                userRole={currentUser?.role || 'doctor'}
+                userRole={currentUser?.role || 'crc'}
             />
         </div>
     );
