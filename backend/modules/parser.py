@@ -89,6 +89,16 @@ import re
 from typing import Optional
 
 
+def get_confidence(extraction_method: str) -> float:
+    """Return hardcoded confidence score based on the extraction method."""
+    return {
+        "regex": 0.95,
+        "nlp": 0.88,
+        "biogpt": 0.76,
+        "fallback": 0.60
+    }.get(extraction_method, 0.60)
+
+
 def _extract_age_range(text: str) -> dict:
     """
     Extract min/max age using regex patterns.
@@ -106,7 +116,8 @@ def _extract_age_range(text: str) -> dict:
                 "max": int(m.group(2)),
                 "source_start": m.start(),
                 "source_end": m.end(),
-                "source_snippet": text[m.start():m.end()]
+                "source_snippet": text[m.start():m.end()],
+                "confidence": get_confidence("regex")
             }
 
     # Single bound: "at least 18 years"
@@ -117,7 +128,8 @@ def _extract_age_range(text: str) -> dict:
             "max": None,
             "source_start": m.start(),
             "source_end": m.end(),
-            "source_snippet": text[m.start():m.end()]
+            "source_snippet": text[m.start():m.end()],
+            "confidence": get_confidence("regex")
         }
 
     return {"min": None, "max": None}
@@ -161,7 +173,8 @@ def _extract_gender(text: str) -> dict:
         "value": val,
         "source_start": start,
         "source_end": end,
-        "source_snippet": text[start:end]
+        "source_snippet": text[start:end],
+        "confidence": get_confidence("regex")
     }
 
 
@@ -181,7 +194,8 @@ def _extract_icd10_codes(text: str) -> list:
                 "code": code,
                 "source_start": m.start(),
                 "source_end": m.end(),
-                "source_snippet": text[m.start():m.end()]
+                "source_snippet": text[m.start():m.end()],
+                "confidence": get_confidence("regex")
             })
     return results
 
@@ -242,7 +256,8 @@ def _extract_lab_values(text: str) -> list:
                 "unit": unit,
                 "source_start": m.start(),
                 "source_end": m.end(),
-                "source_snippet": text[m.start():m.end()]
+                "source_snippet": text[m.start():m.end()],
+                "confidence": get_confidence("regex")
             })
     return results
 
@@ -272,7 +287,8 @@ def _extract_prior_treatments(text: str, nlp=None) -> list:
                         "name": t,
                         "source_start": ent.start_char,
                         "source_end": ent.end_char,
-                        "source_snippet": text[ent.start_char:ent.end_char]
+                        "source_snippet": text[ent.start_char:ent.end_char],
+                        "confidence": get_confidence("nlp")
                     })
     
     # Regex fallback / supplement for common drug mentions
@@ -290,7 +306,8 @@ def _extract_prior_treatments(text: str, nlp=None) -> list:
                 "name": drug,
                 "source_start": m.start(),
                 "source_end": m.end(),
-                "source_snippet": text[m.start():m.end()]
+                "source_snippet": text[m.start():m.end()],
+                "confidence": get_confidence("regex")
             })
 
     return treatments
@@ -387,7 +404,8 @@ def _extract_forbidden_drugs(text: str, nlp=None) -> list:
                 "name": d,
                 "source_start": m.start(),
                 "source_end": m.end(),
-                "source_snippet": text[m.start():m.end()]
+                "source_snippet": text[m.start():m.end()],
+                "confidence": get_confidence("regex")
             })
 
     # ScispaCy NER supplement
@@ -402,7 +420,8 @@ def _extract_forbidden_drugs(text: str, nlp=None) -> list:
                         "name": d,
                         "source_start": ent.start_char,
                         "source_end": ent.end_char,
-                        "source_snippet": text[ent.start_char:ent.end_char]
+                        "source_snippet": text[ent.start_char:ent.end_char],
+                        "confidence": get_confidence("nlp")
                     })
 
     return drugs
@@ -438,7 +457,8 @@ def _extract_forbidden_conditions(text: str, nlp=None) -> list:
                     "name": cleaned,
                     "source_start": start,
                     "source_end": end,
-                    "source_snippet": text[start:end]
+                    "source_snippet": text[start:end],
+                    "confidence": get_confidence("nlp")
                 })
 
     return conditions
@@ -452,7 +472,8 @@ def _extract_pregnancy_flag(text: str) -> dict:
             "value": True,
             "source_start": m.start(),
             "source_end": m.end(),
-            "source_snippet": text[m.start():m.end()]
+            "source_snippet": text[m.start():m.end()],
+            "confidence": get_confidence("regex")
         }
     return {"value": False}
 
@@ -485,7 +506,8 @@ def _extract_prior_conditions(text: str) -> list:
                 "within_months": months,
                 "source_start": m.start(),
                 "source_end": m.end(),
-                "source_snippet": text[m.start():m.end()]
+                "source_snippet": text[m.start():m.end()],
+                "confidence": get_confidence("regex")
             })
 
     return results
@@ -588,7 +610,8 @@ def build_logic_tree(inclusion_entities: dict, exclusion_entities: dict) -> dict
             "operator": "between",
             "source_start": age.get("source_start", 0),
             "source_end": age.get("source_end", 0),
-            "source_snippet": age.get("source_snippet", "")
+            "source_snippet": age.get("source_snippet", ""),
+            "confidence": age.get("confidence", get_confidence("fallback"))
         }
         if age.get("min") is not None:
             cond["min"] = age["min"]
@@ -606,7 +629,8 @@ def build_logic_tree(inclusion_entities: dict, exclusion_entities: dict) -> dict
             "value": val,
             "source_start": gender.get("source_start", 0),
             "source_end": gender.get("source_end", 0),
-            "source_snippet": gender.get("source_snippet", "")
+            "source_snippet": gender.get("source_snippet", ""),
+            "confidence": gender.get("confidence", get_confidence("fallback"))
         })
         
     # 3. Inclusion ICD-10
@@ -618,7 +642,8 @@ def build_logic_tree(inclusion_entities: dict, exclusion_entities: dict) -> dict
             "values": [icd["code"]],
             "source_start": icd["source_start"],
             "source_end": icd["source_end"],
-            "source_snippet": icd["source_snippet"]
+            "source_snippet": icd["source_snippet"],
+            "confidence": icd.get("confidence", get_confidence("fallback"))
         })
         
     # 4. Inclusion Labs
@@ -632,7 +657,8 @@ def build_logic_tree(inclusion_entities: dict, exclusion_entities: dict) -> dict
             "unit": lab["unit"],
             "source_start": lab["source_start"],
             "source_end": lab["source_end"],
-            "source_snippet": lab["source_snippet"]
+            "source_snippet": lab["source_snippet"],
+            "confidence": lab.get("confidence", get_confidence("fallback"))
         })
         
     # 5. Inclusion Treatments
@@ -644,7 +670,8 @@ def build_logic_tree(inclusion_entities: dict, exclusion_entities: dict) -> dict
             "name": treatment["name"],
             "source_start": treatment["source_start"],
             "source_end": treatment["source_end"],
-            "source_snippet": treatment["source_snippet"]
+            "source_snippet": treatment["source_snippet"],
+            "confidence": treatment.get("confidence", get_confidence("fallback"))
         })
         
     # ---- Exclusions ----
@@ -659,7 +686,8 @@ def build_logic_tree(inclusion_entities: dict, exclusion_entities: dict) -> dict
             "name": drug["name"],
             "source_start": drug["source_start"],
             "source_end": drug["source_end"],
-            "source_snippet": drug["source_snippet"]
+            "source_snippet": drug["source_snippet"],
+            "confidence": drug.get("confidence", get_confidence("fallback"))
         })
         
     # 2. Exclusion Conditions
@@ -671,7 +699,8 @@ def build_logic_tree(inclusion_entities: dict, exclusion_entities: dict) -> dict
             "name": cond["name"],
             "source_start": cond["source_start"],
             "source_end": cond["source_end"],
-            "source_snippet": cond["source_snippet"]
+            "source_snippet": cond["source_snippet"],
+            "confidence": cond.get("confidence", get_confidence("fallback"))
         })
         
     # 3. Pregnancy
@@ -684,7 +713,8 @@ def build_logic_tree(inclusion_entities: dict, exclusion_entities: dict) -> dict
             "value": True,
             "source_start": preg.get("source_start", 0),
             "source_end": preg.get("source_end", 0),
-            "source_snippet": preg.get("source_snippet", "")
+            "source_snippet": preg.get("source_snippet", ""),
+            "confidence": preg.get("confidence", get_confidence("fallback"))
         })
         
     # 4. Prior Conditions (Timed)
@@ -697,7 +727,8 @@ def build_logic_tree(inclusion_entities: dict, exclusion_entities: dict) -> dict
             "months": pc["within_months"],
             "source_start": pc["source_start"],
             "source_end": pc["source_end"],
-            "source_snippet": pc["source_snippet"]
+            "source_snippet": pc["source_snippet"],
+            "confidence": pc.get("confidence", get_confidence("fallback"))
         })
         
     # 5. Other Exclusions
@@ -711,7 +742,8 @@ def build_logic_tree(inclusion_entities: dict, exclusion_entities: dict) -> dict
             "value": other,
             "source_start": 0,
             "source_end": 0,
-            "source_snippet": other
+            "source_snippet": other,
+            "confidence": get_confidence("fallback")
         })
 
     return {
@@ -820,10 +852,15 @@ def parse_nuanced_criteria_with_biogpt(criteria_text: str) -> list[dict]:
             
             # Use json loads
             conditions = json.loads(json_str)
-            if isinstance(conditions, list):
-                return conditions
-            else:
-                return [conditions] # if it returned a single dict
+            if not isinstance(conditions, list):
+                conditions = [conditions] # if it returned a single dict
+                
+            # Inject biogpt confidence
+            for c in conditions:
+                if isinstance(c, dict):
+                    c["confidence"] = get_confidence("biogpt")
+                    
+            return conditions
         except Exception as parse_err:
             logger.warning(f"BioGPT JSON parsing failed: {parse_err}. Raw output: {output_str[:100]}...")
             return []
