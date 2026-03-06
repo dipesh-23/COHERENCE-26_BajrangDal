@@ -203,10 +203,9 @@ def anonymize_patient(patient: dict[str, Any]) -> dict[str, Any]:
     ValueError
         If `history_text` is not a string.
     """
-    if "history_text" not in patient:
-        raise KeyError("'history_text' key not found in patient dict.")
-    if not isinstance(patient["history_text"], str):
-        raise ValueError(f"'history_text' must be a str, got {type(patient['history_text'])}.")
+    # Gracefully handle missing, null, or non-string history_text
+    if patient.get("history_text") is None or not isinstance(patient.get("history_text"), str) or not patient["history_text"].strip():
+        return copy.deepcopy(patient)
 
     original_text: str = patient["history_text"]
 
