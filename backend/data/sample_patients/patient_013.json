@@ -1,0 +1,24 @@
+{
+  "patient_id": "PT-00013",
+  "age": 38,
+  "gender": "Male",
+  "zip_code": "71983",
+  "diagnoses": [
+    "E11.9",
+    "E11.65"
+  ],
+  "labs": {
+    "HbA1c": 9.8,
+    "eGFR": 81.0,
+    "creatinine": 0.73,
+    "fasting_glucose": 126.4,
+    "LDL": 124.4,
+    "BMI": 26.5
+  },
+  "medications": [
+    "Metformin 1000mg twice daily",
+    "Amlodipine 5mg once daily",
+    "Metoprolol succinate 50mg once daily"
+  ],
+  "history_text": "38-year-old male with a 2-year history of Type 2 diabetes mellitus, currently poorly controlled (HbA1c 9.8%). Comorbidities include T2DM with hyperglycaemia. Renal function is within normal limits. Current medications include Metformin 1000mg twice daily, Amlodipine 5mg once daily, Metoprolol succinate 50mg once daily. No known drug allergies. He denies recent hospitalisations or surgical procedures."
+}

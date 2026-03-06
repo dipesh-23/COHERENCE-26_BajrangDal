@@ -1,0 +1,26 @@
+{
+  "patient_id": "PT-00004",
+  "age": 53,
+  "gender": "Male",
+  "zip_code": "97697",
+  "diagnoses": [
+    "E11.9",
+    "E78.5"
+  ],
+  "labs": {
+    "HbA1c": 8.2,
+    "eGFR": 65.4,
+    "creatinine": 1.25,
+    "fasting_glucose": 120.9,
+    "LDL": 102.6,
+    "BMI": 36.1
+  },
+  "medications": [
+    "Insulin NPH 22 units nightly",
+    "Amlodipine 5mg once daily",
+    "Atorvastatin 20mg nightly",
+    "Rosuvastatin 10mg nightly",
+    "Omeprazole 20mg once daily"
+  ],
+  "history_text": "53-year-old male with a 15-year history of Type 2 diabetes mellitus, currently moderately controlled (HbA1c 8.2%). Comorbidities include hyperlipidaemia. Renal function is mildly to moderately reduced (eGFR 65.4 mL/min/1.73m\u00b2). Current medications include Insulin NPH 22 units nightly, Amlodipine 5mg once daily, Atorvastatin 20mg nightly. No known drug allergies. He denies recent hospitalisations or surgical procedures."
+}

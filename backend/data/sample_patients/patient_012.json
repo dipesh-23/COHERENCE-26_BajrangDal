@@ -1,0 +1,28 @@
+{
+  "patient_id": "PT-00012",
+  "age": 50,
+  "gender": "Female",
+  "zip_code": "97581",
+  "diagnoses": [
+    "E11.9",
+    "M79.3",
+    "E78.5",
+    "G47.33"
+  ],
+  "labs": {
+    "HbA1c": 7.1,
+    "eGFR": 87.1,
+    "creatinine": 0.87,
+    "fasting_glucose": 179.8,
+    "LDL": 154.2,
+    "BMI": 38.5
+  },
+  "medications": [
+    "Metformin 500mg twice daily",
+    "Sitagliptin 100mg once daily",
+    "Empagliflozin 10mg once daily",
+    "Omeprazole 20mg once daily",
+    "Rosuvastatin 10mg nightly"
+  ],
+  "history_text": "50-year-old female with a 15-year history of Type 2 diabetes mellitus, currently well-controlled (HbA1c 7.1%). Comorbidities include peripheral neuropathy, hyperlipidaemia, obstructive sleep apnoea. Renal function is within normal limits. Current medications include Metformin 500mg twice daily, Sitagliptin 100mg once daily, Empagliflozin 10mg once daily. No known drug allergies. She denies recent hospitalisations or surgical procedures."
+}

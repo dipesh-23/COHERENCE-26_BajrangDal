@@ -1,0 +1,24 @@
+{
+  "patient_id": "PT-00002",
+  "age": 69,
+  "gender": "Female",
+  "zip_code": "15093",
+  "diagnoses": [
+    "E11.9",
+    "M79.3"
+  ],
+  "labs": {
+    "HbA1c": 9.2,
+    "eGFR": 81.4,
+    "creatinine": 0.7,
+    "fasting_glucose": 243.1,
+    "LDL": 143.8,
+    "BMI": 30.1
+  },
+  "medications": [
+    "Metformin 1000mg twice daily",
+    "Amlodipine 5mg once daily",
+    "Sitagliptin 100mg once daily"
+  ],
+  "history_text": "69-year-old female with a 4-year history of Type 2 diabetes mellitus, currently poorly controlled (HbA1c 9.2%). Comorbidities include peripheral neuropathy. Renal function is within normal limits. Current medications include Metformin 1000mg twice daily, Amlodipine 5mg once daily, Sitagliptin 100mg once daily. No known drug allergies. She denies recent hospitalisations or surgical procedures."
+}

@@ -1,0 +1,27 @@
+{
+  "patient_id": "PT-00017",
+  "age": 54,
+  "gender": "Female",
+  "zip_code": "04666",
+  "diagnoses": [
+    "E11.9",
+    "E78.5",
+    "I10"
+  ],
+  "labs": {
+    "HbA1c": 8.6,
+    "eGFR": 89.9,
+    "creatinine": 1.0,
+    "fasting_glucose": 103.9,
+    "LDL": 85.6,
+    "BMI": 28.8
+  },
+  "medications": [
+    "Metformin 500mg twice daily",
+    "Insulin glargine 20 units nightly",
+    "Aspirin 81mg once daily",
+    "Atorvastatin 20mg nightly",
+    "Metoprolol succinate 50mg once daily"
+  ],
+  "history_text": "54-year-old female with a 18-year history of Type 2 diabetes mellitus, currently moderately controlled (HbA1c 8.6%). Comorbidities include hyperlipidaemia, hypertension. Renal function is within normal limits. Current medications include Metformin 500mg twice daily, Insulin glargine 20 units nightly, Aspirin 81mg once daily. No known drug allergies. She denies recent hospitalisations or surgical procedures."
+}

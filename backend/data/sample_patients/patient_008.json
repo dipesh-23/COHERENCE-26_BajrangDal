@@ -1,0 +1,24 @@
+{
+  "patient_id": "PT-00008",
+  "age": 45,
+  "gender": "Female",
+  "zip_code": "18790",
+  "diagnoses": [
+    "E11.9",
+    "G47.33"
+  ],
+  "labs": {
+    "HbA1c": 10.9,
+    "eGFR": 79.3,
+    "creatinine": 1.15,
+    "fasting_glucose": 110.2,
+    "LDL": 135.0,
+    "BMI": 39.2
+  },
+  "medications": [
+    "Insulin glargine 20 units nightly",
+    "Empagliflozin 10mg once daily",
+    "Atorvastatin 20mg nightly"
+  ],
+  "history_text": "45-year-old female with a 9-year history of Type 2 diabetes mellitus, currently poorly controlled (HbA1c 10.9%). Comorbidities include obstructive sleep apnoea. Renal function is within normal limits. Current medications include Insulin glargine 20 units nightly, Empagliflozin 10mg once daily, Atorvastatin 20mg nightly. No known drug allergies. She denies recent hospitalisations or surgical procedures."
+}

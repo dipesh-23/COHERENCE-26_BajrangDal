@@ -1,0 +1,28 @@
+{
+  "patient_id": "PT-00001",
+  "age": 42,
+  "gender": "Male",
+  "zip_code": "84311",
+  "diagnoses": [
+    "E11.9",
+    "G47.33",
+    "E78.5",
+    "E11.65"
+  ],
+  "labs": {
+    "HbA1c": 7.1,
+    "eGFR": 49.6,
+    "creatinine": 1.82,
+    "fasting_glucose": 193.6,
+    "LDL": 130.9,
+    "BMI": 24.6
+  },
+  "medications": [
+    "Metformin 500mg twice daily",
+    "Omeprazole 20mg once daily",
+    "Lisinopril 10mg once daily",
+    "Rosuvastatin 10mg nightly",
+    "Empagliflozin 10mg once daily"
+  ],
+  "history_text": "42-year-old male with a 11-year history of Type 2 diabetes mellitus, currently well-controlled (HbA1c 7.1%). Comorbidities include obstructive sleep apnoea, hyperlipidaemia, T2DM with hyperglycaemia. Renal function is mildly to moderately reduced (eGFR 49.6 mL/min/1.73m\u00b2). Current medications include Metformin 500mg twice daily, Omeprazole 20mg once daily, Lisinopril 10mg once daily. No known drug allergies. He denies recent hospitalisations or surgical procedures."
+}

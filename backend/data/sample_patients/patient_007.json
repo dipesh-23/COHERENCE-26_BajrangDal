@@ -1,0 +1,27 @@
+{
+  "patient_id": "PT-00007",
+  "age": 45,
+  "gender": "Female",
+  "zip_code": "29757",
+  "diagnoses": [
+    "E11.9",
+    "E78.5",
+    "E66.9",
+    "E11.65"
+  ],
+  "labs": {
+    "HbA1c": 9.2,
+    "eGFR": 66.1,
+    "creatinine": 1.08,
+    "fasting_glucose": 195.1,
+    "LDL": 173.1,
+    "BMI": 36.2
+  },
+  "medications": [
+    "Metformin XR 750mg once daily",
+    "Empagliflozin 10mg once daily",
+    "Amlodipine 5mg once daily",
+    "Aspirin 81mg once daily"
+  ],
+  "history_text": "45-year-old female with a 7-year history of Type 2 diabetes mellitus, currently poorly controlled (HbA1c 9.2%). Comorbidities include hyperlipidaemia, obesity, T2DM with hyperglycaemia. Renal function is mildly to moderately reduced (eGFR 66.1 mL/min/1.73m\u00b2). Current medications include Metformin XR 750mg once daily, Empagliflozin 10mg once daily, Amlodipine 5mg once daily. No known drug allergies. She denies recent hospitalisations or surgical procedures."
+}

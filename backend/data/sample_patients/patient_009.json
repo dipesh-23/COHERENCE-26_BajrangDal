@@ -1,0 +1,26 @@
+{
+  "patient_id": "PT-00009",
+  "age": 68,
+  "gender": "Male",
+  "zip_code": "97031",
+  "diagnoses": [
+    "E11.9",
+    "I25.10",
+    "E66.9",
+    "I10"
+  ],
+  "labs": {
+    "HbA1c": 7.0,
+    "eGFR": 61.3,
+    "creatinine": 1.3,
+    "fasting_glucose": 243.3,
+    "LDL": 88.7,
+    "BMI": 28.3
+  },
+  "medications": [
+    "Insulin glargine 20 units nightly",
+    "Metoprolol succinate 50mg once daily",
+    "Amlodipine 5mg once daily"
+  ],
+  "history_text": "68-year-old male with a 25-year history of Type 2 diabetes mellitus, currently well-controlled (HbA1c 7.0%). Comorbidities include coronary artery disease, obesity, hypertension. Renal function is mildly to moderately reduced (eGFR 61.3 mL/min/1.73m\u00b2). Current medications include Insulin glargine 20 units nightly, Metoprolol succinate 50mg once daily, Amlodipine 5mg once daily. No known drug allergies. He denies recent hospitalisations or surgical procedures."
+}

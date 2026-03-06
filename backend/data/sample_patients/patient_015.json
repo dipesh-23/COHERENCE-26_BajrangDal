@@ -1,0 +1,27 @@
+{
+  "patient_id": "PT-00015",
+  "age": 47,
+  "gender": "Female",
+  "zip_code": "77898",
+  "diagnoses": [
+    "E11.9",
+    "I10"
+  ],
+  "labs": {
+    "HbA1c": 9.1,
+    "eGFR": 69.4,
+    "creatinine": 1.22,
+    "fasting_glucose": 100.9,
+    "LDL": 130.1,
+    "BMI": 33.1
+  },
+  "medications": [
+    "Metformin 500mg twice daily",
+    "Insulin glargine 20 units nightly",
+    "Amlodipine 5mg once daily",
+    "Atorvastatin 20mg nightly",
+    "Omeprazole 20mg once daily",
+    "Aspirin 81mg once daily"
+  ],
+  "history_text": "47-year-old female with a 3-year history of Type 2 diabetes mellitus, currently poorly controlled (HbA1c 9.1%). Comorbidities include hypertension. Renal function is mildly to moderately reduced (eGFR 69.4 mL/min/1.73m\u00b2). Current medications include Metformin 500mg twice daily, Insulin glargine 20 units nightly, Amlodipine 5mg once daily. No known drug allergies. She denies recent hospitalisations or surgical procedures."
+}

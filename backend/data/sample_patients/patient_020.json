@@ -1,0 +1,27 @@
+{
+  "patient_id": "PT-00020",
+  "age": 69,
+  "gender": "Male",
+  "zip_code": "29158",
+  "diagnoses": [
+    "E11.9",
+    "N18.3",
+    "E66.9"
+  ],
+  "labs": {
+    "HbA1c": 7.1,
+    "eGFR": 58.9,
+    "creatinine": 1.93,
+    "fasting_glucose": 241.3,
+    "LDL": 163.3,
+    "BMI": 40.2
+  },
+  "medications": [
+    "Metformin 500mg twice daily",
+    "Amlodipine 5mg once daily",
+    "Empagliflozin 10mg once daily",
+    "Sitagliptin 100mg once daily",
+    "Aspirin 81mg once daily"
+  ],
+  "history_text": "69-year-old male with a 24-year history of Type 2 diabetes mellitus, currently well-controlled (HbA1c 7.1%). Comorbidities include stage 3 chronic kidney disease, obesity. Renal function is mildly to moderately reduced (eGFR 58.9 mL/min/1.73m\u00b2). Current medications include Metformin 500mg twice daily, Amlodipine 5mg once daily, Empagliflozin 10mg once daily. No known drug allergies. He denies recent hospitalisations or surgical procedures."
+}

@@ -1,0 +1,26 @@
+{
+  "patient_id": "PT-00019",
+  "age": 38,
+  "gender": "Male",
+  "zip_code": "12781",
+  "diagnoses": [
+    "E11.9",
+    "E11.65",
+    "M79.3",
+    "N18.3"
+  ],
+  "labs": {
+    "HbA1c": 6.7,
+    "eGFR": 60.0,
+    "creatinine": 1.04,
+    "fasting_glucose": 276.2,
+    "LDL": 79.4,
+    "BMI": 32.0
+  },
+  "medications": [
+    "Insulin NPH 22 units nightly",
+    "Amlodipine 5mg once daily",
+    "Omeprazole 20mg once daily"
+  ],
+  "history_text": "38-year-old male with a 3-year history of Type 2 diabetes mellitus, currently well-controlled (HbA1c 6.7%). Comorbidities include T2DM with hyperglycaemia, peripheral neuropathy, stage 3 chronic kidney disease. Renal function is mildly to moderately reduced (eGFR 60.0 mL/min/1.73m\u00b2). Current medications include Insulin NPH 22 units nightly, Amlodipine 5mg once daily, Omeprazole 20mg once daily. No known drug allergies. He denies recent hospitalisations or surgical procedures."
+}

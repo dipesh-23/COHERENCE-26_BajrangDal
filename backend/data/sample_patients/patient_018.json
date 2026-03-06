@@ -1,0 +1,27 @@
+{
+  "patient_id": "PT-00018",
+  "age": 54,
+  "gender": "Male",
+  "zip_code": "04406",
+  "diagnoses": [
+    "E11.9",
+    "G47.33",
+    "I25.10",
+    "I10"
+  ],
+  "labs": {
+    "HbA1c": 10.7,
+    "eGFR": 51.0,
+    "creatinine": 1.38,
+    "fasting_glucose": 110.3,
+    "LDL": 126.4,
+    "BMI": 28.9
+  },
+  "medications": [
+    "Insulin NPH 22 units nightly",
+    "Rosuvastatin 10mg nightly",
+    "Aspirin 81mg once daily",
+    "Metoprolol succinate 50mg once daily"
+  ],
+  "history_text": "54-year-old male with a 9-year history of Type 2 diabetes mellitus, currently poorly controlled (HbA1c 10.7%). Comorbidities include obstructive sleep apnoea, coronary artery disease, hypertension. Renal function is mildly to moderately reduced (eGFR 51.0 mL/min/1.73m\u00b2). Current medications include Insulin NPH 22 units nightly, Rosuvastatin 10mg nightly, Aspirin 81mg once daily. No known drug allergies. He denies recent hospitalisations or surgical procedures."
+}

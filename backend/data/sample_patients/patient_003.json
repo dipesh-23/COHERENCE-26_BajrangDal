@@ -1,0 +1,28 @@
+{
+  "patient_id": "PT-00003",
+  "age": 57,
+  "gender": "Female",
+  "zip_code": "03779",
+  "diagnoses": [
+    "E11.9",
+    "G47.33",
+    "E11.65",
+    "I10"
+  ],
+  "labs": {
+    "HbA1c": 9.8,
+    "eGFR": 69.1,
+    "creatinine": 1.29,
+    "fasting_glucose": 161.9,
+    "LDL": 126.2,
+    "BMI": 38.9
+  },
+  "medications": [
+    "Insulin detemir 18 units nightly",
+    "Rosuvastatin 10mg nightly",
+    "Amlodipine 5mg once daily",
+    "Lisinopril 10mg once daily",
+    "Empagliflozin 10mg once daily"
+  ],
+  "history_text": "57-year-old female with a 8-year history of Type 2 diabetes mellitus, currently poorly controlled (HbA1c 9.8%). Comorbidities include obstructive sleep apnoea, T2DM with hyperglycaemia, hypertension. Renal function is mildly to moderately reduced (eGFR 69.1 mL/min/1.73m\u00b2). Current medications include Insulin detemir 18 units nightly, Rosuvastatin 10mg nightly, Amlodipine 5mg once daily. No known drug allergies. She denies recent hospitalisations or surgical procedures."
+}

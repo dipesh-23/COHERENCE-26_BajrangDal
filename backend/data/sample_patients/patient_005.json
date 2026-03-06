@@ -1,0 +1,28 @@
+{
+  "patient_id": "PT-00005",
+  "age": 59,
+  "gender": "Female",
+  "zip_code": "36549",
+  "diagnoses": [
+    "E11.9",
+    "E66.9",
+    "I25.10",
+    "N18.3"
+  ],
+  "labs": {
+    "HbA1c": 10.3,
+    "eGFR": 79.9,
+    "creatinine": 1.07,
+    "fasting_glucose": 96.1,
+    "LDL": 97.9,
+    "BMI": 28.8
+  },
+  "medications": [
+    "Metformin XR 750mg once daily",
+    "Empagliflozin 10mg once daily",
+    "Rosuvastatin 10mg nightly",
+    "Metoprolol succinate 50mg once daily",
+    "Furosemide 40mg once daily"
+  ],
+  "history_text": "59-year-old female with a 21-year history of Type 2 diabetes mellitus, currently poorly controlled (HbA1c 10.3%). Comorbidities include obesity, coronary artery disease, stage 3 chronic kidney disease. Renal function is within normal limits. Current medications include Metformin XR 750mg once daily, Empagliflozin 10mg once daily, Rosuvastatin 10mg nightly. No known drug allergies. She denies recent hospitalisations or surgical procedures."
+}

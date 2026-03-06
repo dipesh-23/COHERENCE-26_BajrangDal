@@ -1,0 +1,26 @@
+{
+  "patient_id": "PT-00014",
+  "age": 38,
+  "gender": "Male",
+  "zip_code": "11896",
+  "diagnoses": [
+    "E11.9",
+    "E66.9"
+  ],
+  "labs": {
+    "HbA1c": 7.2,
+    "eGFR": 66.9,
+    "creatinine": 1.06,
+    "fasting_glucose": 166.2,
+    "LDL": 67.0,
+    "BMI": 30.8
+  },
+  "medications": [
+    "Metformin 1000mg twice daily",
+    "Insulin detemir 18 units nightly",
+    "Sitagliptin 100mg once daily",
+    "Furosemide 40mg once daily",
+    "Metoprolol succinate 50mg once daily"
+  ],
+  "history_text": "38-year-old male with a 3-year history of Type 2 diabetes mellitus, currently well-controlled (HbA1c 7.2%). Comorbidities include obesity. Renal function is mildly to moderately reduced (eGFR 66.9 mL/min/1.73m\u00b2). Current medications include Metformin 1000mg twice daily, Insulin detemir 18 units nightly, Sitagliptin 100mg once daily. No known drug allergies. He denies recent hospitalisations or surgical procedures."
+}

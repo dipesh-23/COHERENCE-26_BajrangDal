@@ -1,0 +1,27 @@
+{
+  "patient_id": "PT-00006",
+  "age": 64,
+  "gender": "Male",
+  "zip_code": "32599",
+  "diagnoses": [
+    "E11.9",
+    "N18.3",
+    "E78.5"
+  ],
+  "labs": {
+    "HbA1c": 9.9,
+    "eGFR": 69.3,
+    "creatinine": 1.22,
+    "fasting_glucose": 171.4,
+    "LDL": 130.0,
+    "BMI": 30.5
+  },
+  "medications": [
+    "Metformin 500mg twice daily",
+    "Insulin NPH 22 units nightly",
+    "Amlodipine 5mg once daily",
+    "Lisinopril 10mg once daily",
+    "Omeprazole 20mg once daily"
+  ],
+  "history_text": "64-year-old male with a 5-year history of Type 2 diabetes mellitus, currently poorly controlled (HbA1c 9.9%). Comorbidities include stage 3 chronic kidney disease, hyperlipidaemia. Renal function is mildly to moderately reduced (eGFR 69.3 mL/min/1.73m\u00b2). Current medications include Metformin 500mg twice daily, Insulin NPH 22 units nightly, Amlodipine 5mg once daily. No known drug allergies. He denies recent hospitalisations or surgical procedures."
+}
