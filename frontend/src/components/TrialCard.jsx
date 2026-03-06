@@ -114,6 +114,7 @@ export default function TrialCard({
     const isDoctor = userRole === 'doctor';
     const isNurse = userRole === 'nurse';
     const isPatient = userRole === 'patient';
+    const isCrc = userRole === 'crc';
 
     return (
         <div
@@ -168,16 +169,30 @@ export default function TrialCard({
                 </div>
 
                 {/* Score display — ring for doctor/nurse, badge for patient */}
-                {isPatient
-                    ? <ScoreBadge score={match_score} />
-                    : <ScoreRing score={match_score} color={tier.hex} />
-                }
+                <div className="flex flex-col items-end">
+                    {isPatient
+                        ? <ScoreBadge score={match_score} />
+                        : <ScoreRing score={match_score} color={tier.hex} />
+                    }
+                    {isCrc && (
+                        <div className={`text-[10px] font-bold px-2 py-0.5 rounded-full text-center mt-1 ${recommendation === 'Proceed'
+                                ? 'bg-teal-50 text-teal-600 border border-teal-200'
+                                : recommendation === 'Verify First'
+                                    ? 'bg-amber-50 text-amber-600 border border-amber-200'
+                                    : 'bg-red-50 text-red-600 border border-red-200'
+                            }`}>
+                            {recommendation === 'Proceed' ? '✅ Screen Now'
+                                : recommendation === 'Verify First' ? '🔍 Verify First'
+                                    : '🚫 Excluded'}
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* ── META ROW ── */}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 pb-2">
                 <span className={`rounded-full text-xs px-2.5 py-1 font-medium ${CONF[confidence] || CONF.MEDIUM}`}>
-                    {confidence === 'HIGH' ? '✅' : confidence === 'MEDIUM' ? '⚠️' : '🔴'} {confidence}
+                    {confidence === 'HIGH' ? '✅ High Confidence' : confidence === 'MEDIUM' ? '⚠️ Verify Required' : '🔴 Low Confidence'}
                 </span>
                 {!isPatient && (
                     <span className="text-slate-400 text-xs">🧪 {phase}</span>
@@ -255,7 +270,7 @@ export default function TrialCard({
             {missing_data?.length > 0 && (
                 <div className="bg-orange-50 border-t border-orange-100 px-4 py-2 text-orange-700 text-xs flex items-center gap-1.5 font-medium">
                     ⚠️ <strong>{missing_data.length}</strong>&nbsp;
-                    {missing_data.length === 1 ? 'field requires' : 'fields require'} verification
+                    {missing_data.length === 1 ? 'item needs' : 'items need'} coordinator verification before screening
                     <span className="text-orange-400 font-normal">({missing_data[0]}{missing_data.length > 1 ? '…' : ''})</span>
                 </div>
             )}
@@ -263,23 +278,30 @@ export default function TrialCard({
             {/* ── EXCLUSION STRIP (doctor / nurse) ── */}
             {!isPatient && exclusion_flags?.length > 0 && (
                 <div className="bg-red-50 border-t border-red-100 px-4 py-2 text-red-700 text-xs flex items-center gap-1.5 font-medium">
-                    🚫 <strong>{exclusion_flags.length}</strong> exclusion{exclusion_flags.length > 1 ? 's' : ''} flagged
+                    🚫 <strong>{exclusion_flags.length}</strong> hard exclusion{exclusion_flags.length > 1 ? 's' : ''} — patient ineligible per protocol
                 </div>
             )}
 
             {/* ── BOTTOM ROW ── */}
             <div className="flex items-center justify-between px-4 py-3 border-t border-slate-50 bg-slate-50/40 rounded-b-2xl">
-                {/* Select */}
-                <button
-                    onClick={e => { e.stopPropagation(); onSelect(); }}
-                    className={`text-xs font-bold px-4 py-2 rounded-full border transition-all duration-150
-            ${isSelected
-                            ? 'bg-[#0D9488] border-[#0D9488] text-white shadow-sm'
-                            : 'bg-white border-slate-200 text-slate-500 hover:border-[#0D9488] hover:text-[#0D9488]'
-                        }`}
-                >
-                    {isSelected ? '✓ Selected' : 'Select'}
-                </button>
+                {/* Select & Time Saved */}
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={e => { e.stopPropagation(); onSelect(); }}
+                        className={`text-xs font-bold px-4 py-2 rounded-full border transition-all duration-150
+                ${isSelected
+                                ? 'bg-[#0D9488] border-[#0D9488] text-white shadow-sm'
+                                : 'bg-white border-slate-200 text-slate-500 hover:border-[#0D9488] hover:text-[#0D9488]'
+                            }`}
+                    >
+                        {isSelected ? '✓ Selected' : isCrc ? 'Review' : 'Select'}
+                    </button>
+                    {isCrc && (
+                        <span className="text-slate-300 text-[10px] flex items-center gap-1">
+                            ⚡ <span className="text-teal-400 font-medium">~12 min saved</span>
+                        </span>
+                    )}
+                </div>
 
                 {/* Role CTA */}
                 <div className="flex items-center gap-2">
@@ -293,12 +315,12 @@ export default function TrialCard({
                         </span>
                     )}
 
-                    {isDoctor && (
+                    {(isDoctor || isCrc) && (
                         <button
                             onClick={e => { e.stopPropagation(); onViewReport(); }}
                             className="group flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full bg-gradient-to-r from-[#0D9488] to-[#0F766E] text-white shadow-md shadow-[#0D9488]/20 hover:shadow-lg hover:shadow-[#0D9488]/30 transition-all"
                         >
-                            Report <span className="transition-transform group-hover:translate-x-0.5">→</span>
+                            {isCrc ? '📋 Open Screening Report' : 'Report'} <span className="transition-transform group-hover:translate-x-0.5">→</span>
                         </button>
                     )}
                     {isNurse && (

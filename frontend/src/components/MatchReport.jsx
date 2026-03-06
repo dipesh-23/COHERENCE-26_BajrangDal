@@ -27,20 +27,20 @@ function MiniRing({ score }) {
 // ─── Recommendation pill ──────────────────────────────────────────────────────
 function RecPill({ recommendation, isPatient }) {
     const map = {
-        'Proceed': { cls: 'bg-gradient-to-r from-[#0D9488] to-[#0F766E] text-white', icon: '🎉', patient: '🎉 Great news! You may be eligible' },
-        'Verify First': { cls: 'bg-amber-400 text-white', icon: '🔍', patient: '🔍 A few things need to be checked' },
-        'Not Suitable': { cls: 'bg-red-500 text-white', icon: '⛔', patient: 'This trial may not be the right fit right now' },
+        'Proceed': { cls: 'bg-gradient-to-r from-[#0D9488] to-[#0F766E] text-white', label: '✅ Eligible — Proceed to Consent', patient: '🎉 Great news! You may be eligible' },
+        'Verify First': { cls: 'bg-amber-400 text-white', label: '🔍 Pending Verification — Hold', patient: '🔍 A few things need to be checked' },
+        'Not Suitable': { cls: 'bg-red-500 text-white', label: '🚫 Ineligible — Protocol Exclusion', patient: 'This trial may not be the right fit right now' },
     };
     const r = map[recommendation] || map['Proceed'];
     return (
         <span className={`rounded-full px-4 py-1.5 text-xs font-bold shadow-sm ${r.cls}`}>
-            {isPatient ? r.patient : `${r.icon} ${recommendation}`}
+            {isPatient ? r.patient : r.label}
         </span>
     );
 }
 
 // ─── Accordion section wrapper ────────────────────────────────────────────────
-function Section({ borderColor, title, badge, children, defaultOpen = true }) {
+function Section({ borderColor, title, badge, children, defaultOpen = true, titleSuffix }) {
     const [open, setOpen] = useState(defaultOpen);
     return (
         <div className="bg-white rounded-xl border-l-4 shadow-sm overflow-hidden mb-3"
@@ -49,8 +49,11 @@ function Section({ borderColor, title, badge, children, defaultOpen = true }) {
                 onClick={() => setOpen(o => !o)}
                 className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 transition-colors"
             >
-                <div className="flex items-center gap-2">
-                    <span className="font-bold text-slate-800 text-sm">{title}</span>
+                <div className="flex flex-1 items-center gap-2">
+                    <span className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                        {title}
+                        {titleSuffix}
+                    </span>
                     {badge != null && (
                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white"
                             style={{ backgroundColor: borderColor }}>{badge}</span>
@@ -134,7 +137,8 @@ export default function MatchReport({
 
     if (!isOpen || !report) return null;
 
-    const isDoctor = userRole === 'doctor';
+    // Treat 'crc' same as 'doctor' for full visibility
+    const isDoctor = userRole === 'doctor' || userRole === 'crc';
     const isNurse = userRole === 'nurse';
     const isPatient = userRole === 'patient';
 
@@ -173,12 +177,22 @@ export default function MatchReport({
                 {/* ── STICKY HEADER ── */}
                 <div className="sticky top-0 z-20 bg-gradient-to-r from-[#0D9488] to-[#0F766E] rounded-t-2xl px-6 py-4 flex items-center gap-4">
                     {/* Left: icon + trial info */}
-                    <div className="text-2xl shrink-0">🔬</div>
+                    <div className="text-2xl shrink-0" title="Patient Screening Report">🔬</div>
                     <div className="flex-1 min-w-0">
-                        <h2 className="text-white font-bold text-base leading-tight truncate">
-                            {isPatient ? 'Your Trial Match Report' : report.trial_name}
-                        </h2>
-                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <div className="flex items-center gap-2 mb-0.5">
+                            <h2 className="text-white font-bold text-base leading-tight truncate">
+                                {isPatient ? 'Your Trial Match Report' : 'Patient Screening Report'}
+                            </h2>
+                            {!isPatient && (
+                                <span className="bg-teal-100 text-teal-600 border border-teal-200 rounded-full text-[10px] px-2 py-0.5 font-bold">CRC Review</span>
+                            )}
+                        </div>
+                        {!isPatient && (
+                            <div className="text-white/90 text-sm font-medium mb-1 truncate">
+                                {report.trial_name}
+                            </div>
+                        )}
+                        <div className="flex items-center gap-2 flex-wrap">
                             {!isPatient && (
                                 <span className="font-mono text-white/70 text-xs">{report.trial_id}</span>
                             )}
@@ -208,13 +222,30 @@ export default function MatchReport({
                     </div>
                 </div>
 
+                {/* ── CRC SCREENING STRIP ── */}
+                {!isPatient && (
+                    <div className="bg-slate-50 border-b border-slate-100 px-6 py-2 flex items-center justify-between flex-shrink-0">
+                        <div className="flex items-center gap-4">
+                            <span className="text-slate-400 text-xs flex items-center gap-1.5">
+                                🕐 Screened: <span className="text-slate-600 font-medium">{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                            </span>
+                            <span className="text-slate-400 text-xs flex items-center gap-1.5">
+                                🔬 Engine: <span className="text-teal-600 font-medium">BioGPT + Rule-Based v2.1</span>
+                            </span>
+                        </div>
+                        <span className="bg-teal-50 text-teal-600 border border-teal-200 text-[10px] font-semibold px-2.5 py-1 rounded-full">
+                            Auto-generated · Not a clinical decision
+                        </span>
+                    </div>
+                )}
+
                 {/* ── SCROLLABLE BODY ── */}
                 <div className="flex-1 overflow-y-auto bg-[#F8FFFE] p-5 scrollbar-teal">
 
                     {/* ── SECTION A: Met Criteria / Why You May Qualify ── */}
                     <Section
                         borderColor="#0D9488"
-                        title={isPatient ? 'A — Why You May Qualify' : `A — Criteria Met`}
+                        title={isPatient ? 'A — Why You May Qualify' : `✅ Eligibility Confirmed`}
                         badge={met.length}
                     >
                         {met.length === 0
@@ -226,8 +257,16 @@ export default function MatchReport({
                     {/* ── SECTION B: Verify / Items Your Doctor Needs (shown to all) ── */}
                     <Section
                         borderColor="#F59E0B"
-                        title={isPatient ? 'B — Items Your Doctor Needs to Confirm' : 'B — Requires Verification'}
+                        title={isPatient ? 'B — Items Your Doctor Needs to Confirm' : '📋 Coordinator Action Required'}
                         badge={verify.length}
+                        titleSuffix={
+                            (!isPatient && report.missing_data?.length > 0) ? (
+                                <span className="flex items-center gap-1.5 ml-2">
+                                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                                    <span className="text-amber-600 text-[10px] font-semibold">Action needed</span>
+                                </span>
+                            ) : null
+                        }
                     >
                         {verify.length === 0
                             ? <p className="text-slate-400 text-sm py-2 flex items-center gap-1.5">✅ Nothing requires verification.</p>
@@ -314,7 +353,7 @@ export default function MatchReport({
 
                     {/* ── SECTION C: Unmet Criteria (doctor/nurse only) ── */}
                     {!isPatient && (
-                        <Section borderColor="#EF4444" title="C — Criteria Not Met" badge={unmet.length}>
+                        <Section borderColor="#EF4444" title="❌ Eligibility Gaps" badge={unmet.length}>
                             {unmet.length === 0
                                 ? <p className="text-slate-400 text-sm py-2 flex items-center gap-1.5">✅ No unmet criteria.</p>
                                 : unmet.map((c, i) => <CriteriaRow key={i} c={c} isNurse={isNurse} isPatient={false} />)
@@ -324,7 +363,7 @@ export default function MatchReport({
 
                     {/* ── SECTION D: Exclusion Flags (doctor/nurse only) ── */}
                     {!isPatient && (
-                        <Section borderColor="#7F1D1D" title="D — Exclusion Flags" badge={excl.length}>
+                        <Section borderColor="#7F1D1D" title="🚫 Protocol Exclusions" badge={excl.length}>
                             {excl.length === 0
                                 ? <p className="text-slate-400 text-sm py-2 flex items-center gap-1.5">✅ No exclusion flags raised.</p>
                                 : excl.map((flag, i) => (
@@ -341,7 +380,7 @@ export default function MatchReport({
                     {(isDoctor || isPatient) && (
                         <Section
                             borderColor="#8B5CF6"
-                            title={isPatient ? 'E — What This Means For You' : 'E — AI Reasoning'}
+                            title={isPatient ? 'E — What This Means For You' : '🧠 AI Screening Summary'}
                         >
                             {isPatient ? (
                                 <div className="space-y-3">
@@ -395,14 +434,21 @@ export default function MatchReport({
 
                     {/* Right: actions */}
                     <div className="flex items-center gap-2">
-                        {isDoctor && (
-                            <button className="flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full border-2 border-[#0D9488] text-[#0D9488] hover:bg-teal-50 transition-colors">
-                                ⭐ Feedback
+                        {!isPatient && (
+                            <div className="flex items-center gap-1 text-xs px-3 text-slate-500">
+                                <span>Was this screening accurate?</span>
+                                <button className="hover:bg-slate-100 rounded p-1 hover:text-green-600 transition-colors">👍</button>
+                                <button className="hover:bg-slate-100 rounded p-1 hover:text-red-600 transition-colors">👎</button>
+                            </div>
+                        )}
+                        {!isPatient && (
+                            <button className="bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 rounded-xl px-3 py-2 text-sm font-medium transition-all flex items-center gap-1.5">
+                                📧 Email PI
                             </button>
                         )}
-                        {isDoctor && (
+                        {!isPatient && (
                             <button className="flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full bg-gradient-to-r from-[#0D9488] to-[#0F766E] text-white shadow-md shadow-teal-200 hover:shadow-lg transition-all">
-                                ⬇️ Download PDF
+                                📤 Export to Investigator
                             </button>
                         )}
                         <button

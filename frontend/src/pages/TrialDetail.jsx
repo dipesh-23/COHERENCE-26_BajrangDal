@@ -31,7 +31,8 @@ export default function TrialDetail({
     const isDoctor = userRole === 'doctor';
     const isNurse = userRole === 'nurse';
     const isPatient = userRole === 'patient';
-    const isClinical = isDoctor || isNurse;
+    const isCrc = userRole === 'crc';
+    const isClinical = isDoctor || isNurse || isCrc;
 
     // Fade-in effect when report arrives
     const [mounted, setMounted] = useState(false);
@@ -141,11 +142,11 @@ export default function TrialDetail({
                         onClick={onBack}
                         className="text-[#0D9488] hover:text-[#0F766E] font-medium flex items-center gap-2 transition-colors duration-200"
                     >
-                        ← Back
+                        ← Back to Screening Results
                     </button>
                     <span className="text-slate-300">/</span>
                     <span className="text-slate-600 font-medium truncate max-w-[40ch]" title={report.trial_name}>
-                        {report.trial_name}
+                        Screening Dashboard / {report.trial_name}
                     </span>
                 </div>
                 <div className="flex items-center gap-3">
@@ -156,9 +157,19 @@ export default function TrialDetail({
 
                     {/* Role Action Button */}
                     {isDoctor && (
-                        <button className="px-4 py-1.5 rounded-full border border-[#0D9488] text-[#0D9488] hover:bg-teal-50 text-sm font-bold transition-colors">
-                            📥 Export PDF
+                        <button className="px-4 py-1.5 rounded-full bg-[#0D9488] hover:bg-[#0F766E] text-white text-sm font-bold shadow-sm transition-colors flex items-center gap-1.5">
+                            ✅ Approve Match
                         </button>
+                    )}
+                    {isCrc && (
+                        <>
+                            <button className="px-4 py-1.5 rounded-full border border-teal-200 text-teal-700 hover:bg-teal-50 text-sm font-bold transition-colors flex items-center gap-1.5">
+                                📧 Email to PI
+                            </button>
+                            <button className="px-4 py-1.5 rounded-full border border-[#0D9488] text-[#0D9488] hover:bg-teal-50 text-sm font-bold transition-colors flex items-center gap-1.5">
+                                📤 Export Screening Report
+                            </button>
+                        </>
                     )}
                     {isNurse && (
                         <button className="px-4 py-1.5 rounded-full border border-amber-500 text-amber-600 hover:bg-amber-50 text-sm font-bold transition-colors">
@@ -202,6 +213,24 @@ export default function TrialDetail({
                                 <div className={`px-3 py-1 text-xs font-bold border rounded-full ${confColor}`}>
                                     {report.confidence} CONFIDENCE
                                 </div>
+                                {isCrc && (
+                                    <div className={`w-full rounded-xl px-3 py-2.5 text-center mt-2 ${report?.recommendation === 'Proceed'
+                                        ? 'bg-teal-50 border border-teal-200'
+                                        : report?.recommendation === 'Verify First'
+                                            ? 'bg-amber-50 border border-amber-200'
+                                            : 'bg-red-50 border border-red-200'
+                                        }`}>
+                                        <p className={`font-bold text-sm ${report?.recommendation === 'Proceed' ? 'text-teal-700'
+                                            : report?.recommendation === 'Verify First' ? 'text-amber-700'
+                                                : 'text-red-700'
+                                            }`}>
+                                            {report?.recommendation === 'Proceed' ? '✅ Eligible for Screening'
+                                                : report?.recommendation === 'Verify First' ? '🔍 Pending CRC Verification'
+                                                    : '🚫 Protocol Exclusion Active'}
+                                        </p>
+                                        <p className="text-slate-400 text-[10px] mt-0.5">CRC Screening Verdict</p>
+                                    </div>
+                                )}
                             </>
                         ) : (
                             // Patient friendly score
@@ -221,9 +250,9 @@ export default function TrialDetail({
                     {/* Trial Info Card */}
                     <div className="bg-white rounded-2xl shadow-sm border border-teal-50 p-4 space-y-3">
                         {[
-                            { icon: '🏥', label: 'Sponsor', val: report.sponsor },
-                            { icon: '📈', label: 'Phase', val: report.phase },
-                            { icon: '📍', label: 'Location', val: report.location },
+                            { icon: '🏥', label: 'Sponsor / IRB', val: report.sponsor },
+                            { icon: '📈', label: 'Trial Phase', val: report.phase },
+                            { icon: '📍', label: 'Trial Site', val: report.location },
                         ].map((row, i) => (
                             <div key={i} className="flex flex-col">
                                 <span className="text-slate-400 text-xs font-semibold flex items-center gap-1.5">
@@ -232,6 +261,14 @@ export default function TrialDetail({
                                 <span className="text-slate-700 text-sm font-medium pl-6">{row.val || '--'}</span>
                             </div>
                         ))}
+                        {report?.distance_string && (
+                            <div className="flex items-center gap-2 pt-2 border-t border-slate-50 mt-1">
+                                <span className="text-slate-400 text-xs w-20 flex-shrink-0 pl-6">Distance</span>
+                                <span className="text-teal-600 text-sm font-semibold bg-teal-50 border border-teal-100 rounded-full px-2 py-0.5 text-[11px]">
+                                    📍 {report.distance_string}
+                                </span>
+                            </div>
+                        )}
                     </div>
 
                     {/* HPSA Left Card (If flagged) */}
@@ -325,9 +362,19 @@ export default function TrialDetail({
                     {/* Hero Card */}
                     <div className="bg-white rounded-2xl shadow-sm border border-teal-50 p-6 flex flex-col relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-64 h-full bg-gradient-to-l from-teal-50/50 to-transparent pointer-events-none" />
-                        <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md text-[10px] font-bold w-max mb-3 border border-slate-200">
-                            {report.trial_id}
-                        </span>
+
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="bg-teal-100 text-teal-700 text-xs font-semibold px-3 py-1 rounded-full border border-teal-200">
+                                {report?.phase}
+                            </span>
+                            <span className="bg-slate-100 text-slate-500 text-xs px-3 py-1 rounded-full font-mono">
+                                {report?.trial_id}
+                            </span>
+                            <span className="bg-amber-50 text-amber-600 text-xs px-3 py-1 rounded-full border border-amber-200 font-medium">
+                                ⏱️ Screened just now
+                            </span>
+                        </div>
+
                         <h1 className="text-2xl font-bold text-slate-800 mb-5 max-w-[80%] leading-snug">
                             {report.trial_name}
                         </h1>
@@ -341,10 +388,11 @@ export default function TrialDetail({
                     {/* CRITERIA TABLE (Doctor/Nurse) OR CARDS (Patient) */}
                     {isClinical ? (
                         <div className="bg-white rounded-2xl shadow-sm border border-teal-50 overflow-hidden flex flex-col">
-                            <div className="bg-slate-50 border-b border-teal-50 px-5 py-3">
-                                <h3 className="text-slate-700 font-bold text-sm flex items-center gap-2">
-                                    <span>📋</span> Detailed Criteria Breakdown
+                            <div className="bg-slate-50 border-b border-teal-50 px-5 py-3 flex flex-col">
+                                <h3 className="text-slate-700 font-bold flex items-center gap-2">
+                                    <span>📋</span> Eligibility Criteria Assessment
                                 </h3>
+                                <p className="text-slate-500 text-xs mt-0.5">Automated rule-based evaluation against protocol inclusion/exclusion criteria</p>
                             </div>
 
                             <div className="flex flex-col">
@@ -373,6 +421,11 @@ export default function TrialDetail({
                                                 <span className="text-xs text-slate-500 leading-relaxed">
                                                     {c.detail}
                                                 </span>
+                                                {isVerify && isCrc && (
+                                                    <p className="text-amber-500 text-[10px] mt-1 flex items-center gap-1">
+                                                        📋 <span className="font-medium">CRC Action:</span> Request updated lab/documentation from referring physician
+                                                    </p>
+                                                )}
                                             </div>
 
                                             {isNurse && isVerify && (
@@ -491,12 +544,12 @@ export default function TrialDetail({
                     )}
 
                     {/* WHAT-IF SIMULATOR (Doctor Only) */}
-                    {isDoctor && Object.keys(whatIfValues).length > 0 && (
+                    {isClinical && Object.keys(whatIfValues).length > 0 && (
                         <div className="bg-white border-2 border-[#0D9488]/20 rounded-2xl p-5 shadow-sm">
-                            <h3 className="text-[#0D9488] font-bold text-sm flex items-center gap-2 mb-4">
-                                <span>🔬</span> What-If Simulator
+                            <h3 className="text-[#0D9488] font-bold text-sm flex items-center gap-2 mb-1">
+                                <span>🔬</span> Eligibility Threshold Simulator
                             </h3>
-                            <p className="text-xs text-slate-500 mb-4">Adjust borderline values to see how the match score might change.</p>
+                            <p className="text-xs text-slate-500 mb-4">Adjust patient values to model how eligibility would change — useful for borderline cases</p>
 
                             <div className="grid grid-cols-2 gap-4 mb-4">
                                 {Object.entries(whatIfValues).map(([key, val]) => (
@@ -521,7 +574,7 @@ export default function TrialDetail({
                                     disabled={simLoading}
                                     className="bg-[#0D9488] hover:bg-[#0F766E] disabled:opacity-50 text-white rounded-full px-5 py-2 text-sm font-bold shadow-sm transition-all"
                                 >
-                                    {simLoading ? 'Calculating...' : 'Recalculate →'}
+                                    {simLoading ? 'Calculating...' : 'Simulate →'}
                                 </button>
                                 {simError && (
                                     <span className="text-sm font-bold text-red-500 animate-pulse">{simError}</span>
@@ -539,9 +592,14 @@ export default function TrialDetail({
 
                     {/* AI REASONING */}
                     <div className={`bg-white rounded-2xl shadow-sm border p-5 ${isClinical ? 'border-purple-100' : 'border-teal-50'}`}>
-                        <h3 className={`font-bold text-sm flex items-center gap-2 mb-3 ${isClinical ? 'text-purple-800' : 'text-[#2E86AB]'}`}>
-                            {isClinical ? <span>🧠 AI Reasoning</span> : <span>💬 What This Means For You</span>}
-                        </h3>
+                        <div className="mb-3">
+                            <h3 className={`font-bold text-sm flex items-center gap-2 ${isClinical ? 'text-purple-800' : 'text-[#2E86AB]'}`}>
+                                {isClinical ? <span>🧠 AI Screening Rationale</span> : <span>💬 What This Means For You</span>}
+                            </h3>
+                            {isClinical && (
+                                <p className="text-[10px] text-slate-500 mt-1">Generated by BioGPT clinical language model — for CRC reference only, not a clinical decision</p>
+                            )}
+                        </div>
 
                         <p className="text-sm text-slate-700 leading-relaxed bg-slate-50/50 p-4 rounded-xl border border-slate-100">
                             {report.llm_explanation || "The patient meets primary endpoints but secondary metrics require review."}
@@ -549,8 +607,8 @@ export default function TrialDetail({
 
                         <div className="mt-4 flex justify-end">
                             {isClinical ? (
-                                <span className="bg-purple-50 text-purple-600 border border-purple-200 rounded-full px-2.5 py-0.5 text-[10px] font-bold flex items-center gap-1.5 uppercase tracking-wide">
-                                    <span>⚡</span> Powered by BioGPT
+                                <span className="bg-purple-50 text-purple-700 border border-purple-200 rounded-full px-3 py-1 text-[10px] font-bold flex items-center gap-1.5 uppercase tracking-wide">
+                                    Auto-generated · Review with PI before enrollment
                                 </span>
                             ) : (
                                 <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-3 py-1 rounded-lg">
@@ -593,6 +651,21 @@ export default function TrialDetail({
                         </div>
                     </div>
 
+                    {isCrc && (
+                        <div className="flex items-center justify-end gap-3 pb-2 mb-2 border-b border-slate-100">
+                            <span className="text-slate-500 text-sm font-medium mr-2">CRC Sign-off:</span>
+                            <button className="bg-teal-500 hover:bg-teal-600 text-white rounded-full px-4 py-2 text-sm font-semibold transition-all shadow-sm hover:shadow-md flex items-center gap-2">
+                                ✅ Approve Screening
+                            </button>
+                            <button className="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-full px-4 py-2 text-sm font-medium transition-all flex items-center gap-2">
+                                🔄 Request Re-screen
+                            </button>
+                            <button className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-full px-4 py-2 text-sm font-medium transition-all flex items-center gap-2">
+                                🚫 Mark Ineligible
+                            </button>
+                        </div>
+                    )}
+
                     {/* FEEDBACK ROW */}
                     <div className="bg-white rounded-2xl shadow-sm border border-teal-50 p-4 flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -616,15 +689,21 @@ export default function TrialDetail({
 
                         <div className="flex items-center gap-3 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
                             {feedbackSent ? (
-                                <span className="text-sm font-bold text-teal-600 italic px-2">✓ Thank you</span>
+                                <span className="text-sm font-bold text-teal-600 italic px-2 flex items-center gap-1">
+                                    ✓ Feedback logged <span className="opacity-60 font-normal">— helps improve future screenings</span>
+                                </span>
                             ) : (
                                 <>
                                     <span className="text-xs font-semibold text-slate-500">
-                                        {isPatient ? 'Was this helpful?' : 'Was this accurate?'}
+                                        Was this automated screening accurate?
                                     </span>
-                                    <div className="flex gap-1">
-                                        <button onClick={() => setFeedbackSent(true)} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-teal-100 text-slate-400 hover:text-teal-700 transition-colors">👍</button>
-                                        <button onClick={() => setFeedbackSent(true)} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-red-100 text-slate-400 hover:text-red-600 transition-colors">👎</button>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => setFeedbackSent(true)} className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-slate-200 bg-white hover:bg-teal-50 hover:border-teal-200 hover:text-teal-700 text-xs font-semibold text-slate-600 transition-colors">
+                                            👍 Yes, accurate
+                                        </button>
+                                        <button onClick={() => setFeedbackSent(true)} className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-slate-200 bg-white hover:bg-red-50 hover:border-red-200 hover:text-red-600 text-xs font-semibold text-slate-600 transition-colors">
+                                            👎 Needs correction
+                                        </button>
                                     </div>
                                 </>
                             )}

@@ -8,9 +8,9 @@ import {
 
 // ─── Score tier helper ─────────────────────────────────────────────────────────
 function getTier(score) {
-    if (score >= 75) return { color: '#0D9488', label: 'Strong Match', glow: '0 0 14px #0D9488aa', badgeCls: 'bg-teal-50 text-teal-700 border-teal-200' };
-    if (score >= 50) return { color: '#F59E0B', label: 'Partial Match', glow: '0 0 14px #F59E0Baa', badgeCls: 'bg-amber-50 text-amber-700 border-amber-200' };
-    return { color: '#EF4444', label: 'Weak Match', glow: '0 0 14px #EF4444aa', badgeCls: 'bg-red-50 text-red-700 border-red-200' };
+    if (score >= 75) return { color: '#0D9488', label: 'Eligible ✅', glow: '0 0 14px #0D9488aa', badgeCls: 'bg-teal-50 text-teal-700 border-teal-200' };
+    if (score >= 50) return { color: '#F59E0B', label: 'Review Required 🔍', glow: '0 0 14px #F59E0Baa', badgeCls: 'bg-amber-50 text-amber-700 border-amber-200' };
+    return { color: '#EF4444', label: 'Likely Ineligible ❌', glow: '0 0 14px #EF4444aa', badgeCls: 'bg-red-50 text-red-700 border-red-200' };
 }
 
 // ─── NULL SKELETON ─────────────────────────────────────────────────────────────
@@ -146,7 +146,7 @@ export default function ScoreGauge({
             {/* ── Header ── */}
             <div className="flex items-center justify-between mb-3">
                 <h3 className="text-[#0F766E] font-bold text-base flex items-center gap-1.5">
-                    📊 Match Score Breakdown
+                    📊 Eligibility Score Breakdown
                 </h3>
                 {(isDoctor || isNurse) && (
                     <div className="relative">
@@ -155,9 +155,8 @@ export default function ScoreGauge({
                             className="text-teal-400 hover:text-teal-600 transition-colors text-sm w-6 h-6 rounded-full flex items-center justify-center hover:bg-teal-50"
                         >ℹ️</button>
                         {infoOpen && (
-                            <div className="absolute right-0 top-7 z-50 bg-[#0F766E] text-white text-xs px-3 py-2 rounded-lg shadow-xl w-52 leading-relaxed">
-                                Scores derive from live <strong>criteria_breakdown</strong> returned by{' '}
-                                <code className="bg-white/20 px-1 rounded">POST /match</code>. Higher = better eligibility.
+                            <div className="absolute right-0 top-7 z-50 bg-[#0F766E] text-white text-xs px-3 py-2 rounded-lg shadow-xl w-64 leading-relaxed whitespace-normal break-words">
+                                Eligibility score = rule-based hard filter pass/fail (binary) + BioGPT semantic soft match (weighted). Combined into 0–100 CRC screening score.
                                 <div className="absolute -top-1.5 right-2 border-[6px] border-transparent border-b-[#0F766E]" />
                             </div>
                         )}
@@ -200,7 +199,7 @@ export default function ScoreGauge({
                         </ResponsiveContainer>
 
                         {/* Center overlay */}
-                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-2">
                             <span
                                 className="font-black text-4xl leading-none tabular-nums"
                                 style={{ color: tier.color, filter: `drop-shadow(${tier.glow})` }}
@@ -211,6 +210,14 @@ export default function ScoreGauge({
                             <span className={`mt-2 text-[10px] font-semibold border rounded-full px-2.5 py-0.5 ${tier.badgeCls}`}>
                                 {tier.label}
                             </span>
+                            <p className={`text-[9px] font-medium mt-1 ${score >= 75 ? 'text-teal-500'
+                                : score >= 50 ? 'text-amber-500'
+                                    : 'text-red-400'
+                                }`}>
+                                {score >= 75 ? 'Proceed to consent screening'
+                                    : score >= 50 ? 'Verify before proceeding'
+                                        : 'Do not screen — check exclusions'}
+                            </p>
                         </div>
                     </div>
 
@@ -233,7 +240,7 @@ export default function ScoreGauge({
 
             {/* ── Footer ── */}
             <p className="text-teal-400 text-[10px] text-center mt-4 font-medium">
-                🧠 Powered by BioGPT + Sentence-Transformers
+                🧬 Scored by BioGPT clinical NLP + rule-based protocol engine
             </p>
         </div>
     );
