@@ -36,8 +36,11 @@ function deriveBreakdown(criteria = []) {
     ];
 }
 
+const NAV_TABS = ['Dashboard', 'Patients', 'Trials'];
+
 export default function Dashboard() {
     // ── Local UI state ──
+    const [activeTab, setActiveTab] = useState('Dashboard');
     const [selectedTrial, setSelectedTrial] = useState(null);
     const [isReportOpen, setIsReportOpen] = useState(false);
     const [filters, setFilters] = useState({ zip: '10001', radius_miles: 50, hpsa_only: false });
@@ -117,12 +120,16 @@ export default function Dashboard() {
 
                 {/* Center nav */}
                 <div className="flex items-center gap-8 absolute left-1/2 -translate-x-1/2">
-                    {['Dashboard', 'Patients', 'Trials'].map((label, i) => (
-                        <button key={label}
-                            className={`relative text-sm font-medium transition-colors duration-200 ${i === 0 ? 'text-blue-500' : 'text-slate-400 hover:text-white'}`}
+                    {NAV_TABS.map((label) => (
+                        <button
+                            key={label}
+                            onClick={() => setActiveTab(label)}
+                            className={`relative text-sm font-medium transition-colors duration-200 ${activeTab === label ? 'text-blue-500' : 'text-slate-400 hover:text-white'}`}
                         >
                             {label}
-                            {i === 0 && <span className="absolute -bottom-[17px] left-0 w-full h-[2px] bg-blue-500 rounded-full" />}
+                            {activeTab === label && (
+                                <span className="absolute -bottom-[17px] left-0 w-full h-[2px] bg-blue-500 rounded-full" />
+                            )}
                         </button>
                     ))}
                 </div>
@@ -200,61 +207,164 @@ export default function Dashboard() {
 
                 {/* ── CENTER COLUMN ── */}
                 <section className="flex-1 flex flex-col overflow-y-auto bg-slate-950 p-6 scrollbar-thin scrollbar-thumb-slate-800">
-                    {/* Header */}
-                    <div className="flex items-center justify-between mb-6 shrink-0">
-                        <div className="flex items-center gap-3">
-                            <h2 className="text-white text-2xl font-bold tracking-tight">Matched Trials</h2>
-                            {matchResults.length > 0 && (
-                                <span className="bg-blue-500 text-white text-sm font-bold px-3 py-1 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.3)] transition-all duration-300">
-                                    {matchResults.length}
-                                </span>
+
+                    {/* ── DASHBOARD TAB ── */}
+                    {activeTab === 'Dashboard' && (
+                        <>
+                            <div className="flex items-center justify-between mb-6 shrink-0">
+                                <div className="flex items-center gap-3">
+                                    <h2 className="text-white text-2xl font-bold tracking-tight">Matched Trials</h2>
+                                    {matchResults.length > 0 && (
+                                        <span className="bg-blue-500 text-white text-sm font-bold px-3 py-1 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.3)] transition-all duration-300">
+                                            {matchResults.length}
+                                        </span>
+                                    )}
+                                </div>
+                                <select
+                                    value={sortBy}
+                                    onChange={e => setSortBy(e.target.value)}
+                                    className="appearance-none bg-slate-900 border border-slate-700 text-slate-300 text-sm rounded-lg pl-3 pr-8 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                                >
+                                    <option value="score">Sort: Best Match</option>
+                                    <option value="confidence">Sort: Confidence</option>
+                                    <option value="location">Sort: Location</option>
+                                </select>
+                            </div>
+                            {isMatchLoading && (
+                                <div className="flex flex-col gap-4">
+                                    {[1, 2, 3].map(i => (
+                                        <div key={i} className="h-36 bg-slate-900 rounded-xl border border-slate-800 animate-pulse relative overflow-hidden">
+                                            <div className="absolute inset-0 anim-shimmer mix-blend-overlay" />
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            {!isMatchLoading && matchResults.length === 0 && (
+                                <div className="flex-1 flex flex-col items-center justify-center text-center p-12 border-2 border-dashed border-slate-800 rounded-2xl relative overflow-hidden">
+                                    <div className="absolute inset-0 anim-shimmer mix-blend-overlay pointer-events-none" />
+                                    <div className="text-[64px] mb-5 relative">🔬</div>
+                                    <p className="text-slate-300 text-lg font-medium mb-1">Upload a patient record to begin matching</p>
+                                    <p className="text-slate-500 text-sm max-w-sm">Results will appear here based on biomarker profiles, geography, and eligibility criteria.</p>
+                                </div>
+                            )}
+                            {!isMatchLoading && matchResults.length > 0 && (
+                                <div className="flex flex-col gap-4 pb-8">
+                                    {sortedResults.map((result, index) => (
+                                        <div key={result.trial_id} className="anim-fade-up" style={{ animationDelay: `${index * 80}ms` }}>
+                                            <TrialCard
+                                                {...result}
+                                                isSelected={selectedTrial?.trial_id === result.trial_id}
+                                                onSelect={() => setSelectedTrial(result)}
+                                                onViewReport={() => { setSelectedTrial(result); setIsReportOpen(true); }}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </>
+                    )}
+
+                    {/* ── PATIENTS TAB ── */}
+                    {activeTab === 'Patients' && (
+                        <div className="flex-1 flex flex-col anim-fade-up">
+                            <h2 className="text-white text-2xl font-bold tracking-tight mb-6">Patients</h2>
+                            {patientData ? (
+                                <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-xl shadow-lg">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <span className="font-mono text-blue-400 text-sm">{patientData.patient_id}</span>
+                                        <span className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 rounded-full px-2.5 py-0.5 text-xs font-semibold">Active</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4 mb-4">
+                                        <div><p className="text-slate-500 text-xs mb-1">Age</p><p className="text-white font-semibold">{patientData.age} years</p></div>
+                                        <div><p className="text-slate-500 text-xs mb-1">Gender</p><p className="text-white font-semibold">{patientData.gender}</p></div>
+                                        <div><p className="text-slate-500 text-xs mb-1">ZIP Code</p><p className="text-white font-semibold">{patientData.zip || '—'}</p></div>
+                                        <div><p className="text-slate-500 text-xs mb-1">Medications</p><p className="text-white font-semibold">{patientData.medications?.length || 0}</p></div>
+                                    </div>
+                                    <div className="border-t border-slate-700 pt-4">
+                                        <p className="text-slate-500 text-xs mb-2">Diagnoses</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {patientData.diagnoses?.map((d, i) => (
+                                                <span key={i} className="bg-slate-800 border border-slate-600 text-slate-300 text-xs px-2.5 py-1 rounded-lg">{d}</span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    {patientData.labs && (
+                                        <div className="border-t border-slate-700 pt-4 mt-4">
+                                            <p className="text-slate-500 text-xs mb-3">Lab Values</p>
+                                            <div className="grid grid-cols-3 gap-3">
+                                                {Object.entries(patientData.labs).map(([k, v]) => (
+                                                    <div key={k} className="bg-slate-800 rounded-xl p-3 text-center border border-slate-700">
+                                                        <p className={`text-lg font-bold ${labColor(k, v)}`}>{v}{k === 'HbA1c' ? '%' : ''}</p>
+                                                        <p className="text-slate-500 text-[10px] mt-1">{k}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {patientData.history_text && (
+                                        <div className="border-t border-slate-700 pt-4 mt-4">
+                                            <p className="text-slate-500 text-xs mb-2">History</p>
+                                            <p className="text-slate-400 text-sm italic">{patientData.history_text}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="flex-1 flex flex-col items-center justify-center text-center p-12 border-2 border-dashed border-slate-800 rounded-2xl">
+                                    <div className="text-[64px] mb-5">👤</div>
+                                    <p className="text-slate-300 text-lg font-medium mb-1">No patient loaded</p>
+                                    <p className="text-slate-500 text-sm">Upload a patient record using the panel on the left or enable Demo Mode.</p>
+                                    <button onClick={() => setActiveTab('Dashboard')} className="mt-4 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors">← Back to Dashboard</button>
+                                </div>
                             )}
                         </div>
-                        <select
-                            value={sortBy}
-                            onChange={e => setSortBy(e.target.value)}
-                            className="appearance-none bg-slate-900 border border-slate-700 text-slate-300 text-sm rounded-lg pl-3 pr-8 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
-                        >
-                            <option value="score">Sort: Best Match</option>
-                            <option value="confidence">Sort: Confidence</option>
-                            <option value="location">Sort: Location</option>
-                        </select>
-                    </div>
-
-                    {/* Loading skeletons */}
-                    {isMatchLoading && (
-                        <div className="flex flex-col gap-4">
-                            {[1, 2, 3].map(i => (
-                                <div key={i} className="h-36 bg-slate-900 rounded-xl border border-slate-800 animate-pulse relative overflow-hidden">
-                                    <div className="absolute inset-0 anim-shimmer mix-blend-overlay" />
-                                </div>
-                            ))}
-                        </div>
                     )}
 
-                    {/* Empty state */}
-                    {!isMatchLoading && matchResults.length === 0 && (
-                        <div className="flex-1 flex flex-col items-center justify-center text-center p-12 border-2 border-dashed border-slate-800 rounded-2xl relative overflow-hidden">
-                            <div className="absolute inset-0 anim-shimmer mix-blend-overlay pointer-events-none" />
-                            <div className="text-[64px] mb-5 relative">🔬</div>
-                            <p className="text-slate-300 text-lg font-medium mb-1">Upload a patient record to begin matching</p>
-                            <p className="text-slate-500 text-sm max-w-sm">Results will appear here based on biomarker profiles, geography, and eligibility criteria.</p>
-                        </div>
-                    )}
-
-                    {/* Results list */}
-                    {!isMatchLoading && matchResults.length > 0 && (
-                        <div className="flex flex-col gap-4 pb-8">
-                            {sortedResults.map((result, index) => (
-                                <div key={result.trial_id} className="anim-fade-up" style={{ animationDelay: `${index * 80}ms` }}>
-                                    <TrialCard
-                                        {...result}
-                                        isSelected={selectedTrial?.trial_id === result.trial_id}
-                                        onSelect={() => setSelectedTrial(result)}
-                                        onViewReport={() => { setSelectedTrial(result); setIsReportOpen(true); }}
-                                    />
+                    {/* ── TRIALS TAB ── */}
+                    {activeTab === 'Trials' && (
+                        <div className="flex-1 flex flex-col anim-fade-up">
+                            <h2 className="text-white text-2xl font-bold tracking-tight mb-6">All Trials</h2>
+                            {matchResults.length === 0 ? (
+                                <div className="flex-1 flex flex-col items-center justify-center text-center p-12 border-2 border-dashed border-slate-800 rounded-2xl">
+                                    <div className="text-[64px] mb-5">🧪</div>
+                                    <p className="text-slate-300 text-lg font-medium mb-1">No trials to display</p>
+                                    <p className="text-slate-500 text-sm">Run a match from the Dashboard to see all trials here.</p>
+                                    <button onClick={() => setActiveTab('Dashboard')} className="mt-4 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors">← Go to Dashboard</button>
                                 </div>
-                            ))}
+                            ) : (
+                                <div className="overflow-x-auto rounded-xl border border-slate-800">
+                                    <table className="w-full text-sm text-left">
+                                        <thead className="bg-slate-900 border-b border-slate-700">
+                                            <tr>
+                                                {['Trial', 'Phase', 'Score', 'Confidence', 'Location', 'Recommendation', ''].map(h => (
+                                                    <th key={h} className="px-4 py-3 text-slate-400 text-[10px] font-bold uppercase tracking-wider">{h}</th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-800">
+                                            {matchResults.map((r) => {
+                                                const tier = r.match_score >= 75 ? 'text-emerald-400' : r.match_score >= 50 ? 'text-amber-400' : 'text-red-400';
+                                                const conf = { HIGH: 'bg-emerald-500/15 text-emerald-400', MEDIUM: 'bg-amber-500/15 text-amber-400', LOW: 'bg-red-500/15 text-red-400' }[r.confidence] || '';
+                                                return (
+                                                    <tr key={r.trial_id} className="bg-slate-950 hover:bg-slate-900 transition-colors cursor-pointer" onClick={() => { setSelectedTrial(r); setActiveTab('Dashboard'); }}>
+                                                        <td className="px-4 py-3">
+                                                            <p className="text-white font-semibold">{r.trial_name}</p>
+                                                            <p className="font-mono text-xs text-slate-500">{r.trial_id}</p>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-slate-400">{r.phase}</td>
+                                                        <td className={`px-4 py-3 font-bold tabular-nums ${tier}`}>{r.match_score}</td>
+                                                        <td className="px-4 py-3"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${conf}`}>{r.confidence}</span></td>
+                                                        <td className="px-4 py-3 text-slate-400">{r.location}</td>
+                                                        <td className="px-4 py-3 text-slate-400">{r.recommendation}</td>
+                                                        <td className="px-4 py-3">
+                                                            <button onClick={e => { e.stopPropagation(); setSelectedTrial(r); setIsReportOpen(true); }} className="text-xs text-blue-400 hover:text-blue-300 font-semibold transition-colors">Report →</button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                         </div>
                     )}
                 </section>
