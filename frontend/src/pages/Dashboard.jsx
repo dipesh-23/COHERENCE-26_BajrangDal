@@ -38,7 +38,11 @@ function deriveBreakdown(criteria = []) {
 
 const NAV_TABS = ['Dashboard', 'Patients', 'Trials'];
 
-export default function Dashboard() {
+export default function Dashboard({
+    currentUser = null,   // { id, name, role, department, hospital }
+    token = null,         // JWT — passed to API calls via Authorization header
+    onLogout = () => { },  // clears session in App.jsx
+}) {
     // ── Local UI state ──
     const [activeTab, setActiveTab] = useState('Dashboard');
     const [selectedTrial, setSelectedTrial] = useState(null);
@@ -135,17 +139,31 @@ export default function Dashboard() {
                 </div>
 
                 {/* Right */}
-                <div className="flex items-center gap-5">
+                <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2 bg-slate-800/60 border border-slate-700/50 rounded-full px-3 py-1">
                         <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.7)] anim-pulse" />
                         <span className="text-emerald-400 text-xs font-medium">System Online</span>
                     </div>
+                    {currentUser && (
+                        <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-full pl-1 pr-3 py-1">
+                            <div className="w-7 h-7 rounded-full bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-sm">
+                                {currentUser.role === 'doctor' ? '👨‍⚕️' : currentUser.role === 'nurse' ? '👩‍⚕️' : '🧑‍🦽'}
+                            </div>
+                            <span className="text-slate-300 text-xs font-medium">{currentUser.name}</span>
+                        </div>
+                    )}
                     <button
                         onClick={() => setIsDarkMode(!isDarkMode)}
                         className="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-700 transition-all"
                         style={{ transform: isDarkMode ? 'rotate(180deg)' : 'rotate(0deg)', transitionDuration: '300ms' }}
                     >
                         {isDarkMode ? '☀️' : '🌙'}
+                    </button>
+                    <button
+                        onClick={onLogout}
+                        className="text-slate-500 hover:text-slate-200 text-xs font-semibold border border-slate-700 hover:border-slate-500 rounded-full px-3 py-1.5 transition-all duration-150"
+                    >
+                        Sign Out
                     </button>
                 </div>
             </nav>
