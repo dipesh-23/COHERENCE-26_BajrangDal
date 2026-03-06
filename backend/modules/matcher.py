@@ -1,140 +1,44 @@
-"""
-Matcher Engine for Clinical Trial Recommendation
-"""
-
-from geopy.geocoders import Nominatim
-from geopy.distance import geodesic
-from sentence_transformers import SentenceTransformer, util
-
-# Ensure these paths match your folder structure
 from models.patient import Patient
 from models.trial import Trial
+from modules.scorer import get_scorer
 
-# ---------------------------
-# Geolocation Setup
-# ---------------------------
-_geocoder = None
-
-def get_geocoder():
-    global _geocoder
-    if _geocoder is None:
-        # Nominatim requires a unique user_agent
-        _geocoder = Nominatim(user_agent="clinical-trial-matcher-v2")
-    return _geocoder
-
-def zip_to_coords(location_str: str):
-    """Convert ZIP or City string to latitude/longitude."""
-    try:
-        geocoder = get_geocoder()
-        # Adding 'USA' helps the geocoder narrow down the search
-        query = f"{location_str}, USA" if "," not in location_str else location_str
-        location = geocoder.geocode(query, timeout=10) 
-        
-        if location:
-            return (location.latitude, location.longitude)
-    except Exception as e:
-        print(f"Geocoding error: {e}")
-    return None
-
-def within_radius(patient_zip: str, trial_location: str, max_miles: float):
-    """Check if trial location is within distance radius."""
-    if max_miles <= 0:
-        return True
-
-    p_coords = zip_to_coords(patient_zip)
-    t_coords = zip_to_coords(trial_location)
-
-    # DEBUG: See what the geocoder is actually finding
-    if p_coords is None or t_coords is None:
-        print(f"DEBUG: Geocoder failed. Patient: {p_coords}, Trial: {t_coords}")
-        # To prevent false negatives during testing, you can return True here
-        # or log that the location check was skipped.
-        return True 
-
-    distance = geodesic(p_coords, t_coords).miles
-    return distance <= max_miles
-# ---------------------------
-# Hard Filter Logic
-# ---------------------------
-
-def hard_filter(patient_data: dict, trial_data: dict) -> tuple[bool, list]:
+def hard_filter(patient: Patient, trial: Trial) -> tuple[bool, list]:
     reasons = []
     
-    try:
-        # FIXED: Using unique variable names to avoid shadowing the Class names
-        patient_obj = Patient.model_validate(patient_data)
-        trial_obj = Trial.model_validate(trial_data)
-    except Exception as e:
-        return False, [f"Validation Error: {str(e)}"]
-
-    criteria_text = trial_obj.criteria_text.lower()
-    history = patient_obj.history_text.lower()
-
-    # 1. AGE CHECK
-    if "age" in criteria_text:
-        if patient_obj.age < 18:
-            reasons.append(f"Age Check Failed: Patient is {patient_obj.age}, trial requires 18+.")
-
-    # 2. DIAGNOSIS CHECK
-    patient_codes = {d.upper() for d in patient_obj.diagnoses}
-    criteria_upper = trial_obj.criteria_text.upper()
+    # We now use the combined property from your new Trial model
+    criteria = trial.full_criteria_text.lower()
     
-    if ("E11" in criteria_upper or "DIABETES" in criteria_upper):
-        if not any(code.startswith("E11") for code in patient_codes):
-            reasons.append("Diagnosis Check Failed: No 'E11' (Type 2 Diabetes) code found.")
+    # 1. Age Check (Using the structured fields in the Trial model!)
+    if patient.age < trial.min_age:
+        reasons.append(f"Patient age ({patient.age}) is below minimum ({trial.min_age}).")
+    if patient.age > trial.max_age:
+        reasons.append(f"Patient age ({patient.age}) is above maximum ({trial.max_age}).")
+        
+    # 2. Diagnosis Check (Using the structured fields)
+    if trial.required_diagnoses:
+        # patient.diagnoses is a Dict[str, date], so we look at the keys
+        patient_codes = [code.upper() for code in patient.diagnoses.keys()]
+        has_required = any(req in patient_codes for req in trial.required_diagnoses)
+        if not has_required:
+            reasons.append(f"Missing required diagnosis: {', '.join(trial.required_diagnoses)}")
 
-    # 3. MEDICATION EXCLUSION
-    meds = {m.lower() for m in patient_obj.medications}
-    if "glp-1" in criteria_text or "receptor agonist" in criteria_text:
-        excluded_meds = ["semaglutide", "liraglutide", "dulaglutide", "ozempic", "mounjaro"]
-        for med in meds:
-            if any(ex in med for ex in excluded_meds):
-                reasons.append(f"Medication Exclusion: Patient takes {med} (GLP-1).")
-
-    # 4. RENAL EXCLUSION
-    if "end-stage renal disease" in criteria_text or "esrd" in criteria_text:
-        if any(term in history for term in ["end-stage renal disease", "ckd stage 5", "esrd"]):
-            reasons.append("Renal Exclusion: Trial excludes ESRD.")
-
-    # 5. LOCATION CHECK (Set to 500 miles default)
-    if not within_radius(patient_obj.zip_code, trial_obj.location, 500):
-        reasons.append(f"Location Failed: Site '{trial_obj.location}' is too far from '{patient_obj.zip_code}'.")
+    # 3. Lab Rule Example (Fallback to text check for now)
+    if "hba1c > 7" in criteria:
+        patient_hba1c = patient.labs.get("HbA1c")
+        if patient_hba1c and patient_hba1c.value <= 7.0:
+            reasons.append(f"HbA1c is {patient_hba1c.value}%, but trial requires > 7.0%.")
 
     return (len(reasons) == 0, reasons)
 
-# ---------------------------
-# Semantic Similarity
-# ---------------------------
-model = SentenceTransformer("all-MiniLM-L6-v2")
 
-def soft_match(patient_history: str, trial_criteria: str) -> float:
-    emb_patient = model.encode(patient_history, convert_to_tensor=True)
-    emb_trial = model.encode(trial_criteria, convert_to_tensor=True)
-    similarity = util.cos_sim(emb_patient, emb_trial)
-    return float(similarity)
-
-# ---------------------------
-# Final Export
-# ---------------------------
-
-def match_patient_to_trial(patient_data: dict, trial_data: dict):
-    eligible, failure_reasons = hard_filter(patient_data, trial_data)
-
+def match_patient_to_trial(patient: Patient, trial: Trial) -> dict:
+    eligible, reasons = hard_filter(patient, trial)
+    
     if not eligible:
-        return {
-            "eligible": False,
-            "score": 0.0,
-            "reasons": failure_reasons
-        }
+        return {"eligible": False, "score": 0.0, "reasons": reasons}
 
-    # Soft match using corrected dictionary key
-    score = soft_match(
-        patient_data["history_text"], 
-        trial_data["criteria_text"]
-    )
-
-    return {
-        "eligible": True,
-        "score": round(score, 4),
-        "reasons": []
-    }
+    scorer = get_scorer()
+    # Pass the newly combined text into the NLP Scorer
+    score = scorer.compute_score(patient.medical_history, trial.full_criteria_text)
+    
+    return {"eligible": True, "score": score, "reasons": []}
