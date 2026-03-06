@@ -604,6 +604,72 @@ def parse_trial_criteria(trial_id: str, raw_inclusion_text: str, raw_exclusion_t
 
 
 # ---------------------------------------------------------------------------
+# BioGPT Nuanced Criteria Parser (LLM Fallback)
+# ---------------------------------------------------------------------------
+
+def parse_nuanced_criteria_with_biogpt(criteria_text: str) -> list[dict]:
+    """
+    Uses Microsoft's BioGPT model via HuggingFace transformers to extract structured
+    eligibility criteria from nuanced, non-standard clinical text.
+
+    If BioGPT fails to load or prediction times out, gracefully falls back to returning
+    an empty list and logs a warning.
+    
+    Returns
+    -------
+    list[dict]
+        A list of condition dicts parsed from the LLM output.
+    """
+    import logging
+    import json
+    try:
+        from transformers import pipeline, set_seed
+    except ImportError:
+        logging.warning("transformers library not found. Run pip install transformers torch. Returning empty list.")
+        return []
+
+    logger = logging.getLogger(__name__)
+
+    try:
+        # We load pipeline with max_length to prevent timeouts.
+        # This pipeline download might take a while on first run.
+        generator = pipeline("text-generation", model="microsoft/BioGPT-Large", device=-1)
+        set_seed(42)
+
+        prompt = (
+            "Extract structured eligibility criteria from this clinical trial text "
+            f"as a JSON list of conditions:\nText: {criteria_text}\nJSON:\n["
+        )
+
+        response = generator(prompt, max_new_tokens=150, num_return_sequences=1, temperature=0.1)
+        output_str = response[0]["generated_text"]
+
+        # Try to parse the output as JSON
+        # The prompt ends with "[", so we extract everything after "JSON:\n"
+        try:
+            json_str = output_str.split("JSON:\n")[-1].strip()
+            # It might have generated extra text after the list, so we safely parse
+            if not json_str.startswith("["):
+                json_str = "[" + json_str
+            if json_str.endswith(","):
+                json_str = json_str[:-1] + "]"
+            
+            # Use json loads
+            conditions = json.loads(json_str)
+            if isinstance(conditions, list):
+                return conditions
+            else:
+                return [conditions] # if it returned a single dict
+        except Exception as parse_err:
+            logger.warning(f"BioGPT JSON parsing failed: {parse_err}. Raw output: {output_str[:100]}...")
+            return []
+
+    except Exception as e:
+        logger.warning(f"BioGPT inference failed or timed out: {e}")
+        return []
+
+
+# ---------------------------------------------------------------------------
 # Smoke-tests (run: conda activate clinical-nlp && python backend/modules/parser.py)
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
