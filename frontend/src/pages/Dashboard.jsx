@@ -197,6 +197,21 @@ export default function Dashboard({
                     {/* ── DASHBOARD TAB ── */}
                     {activeTab === 'Dashboard' && (
                         <>
+                            {isDemoMode && (
+                                <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 mb-2">
+                                    <span className="text-amber-500 text-lg">⚡</span>
+                                    <div>
+                                        <p className="text-amber-700 font-semibold text-sm">Demo Mode Active</p>
+                                        <p className="text-amber-500 text-xs">Showing simulated patient P-84921 · 62yo Female · East Harlem, NY</p>
+                                    </div>
+                                    <button
+                                        onClick={toggleDemoMode}
+                                        className="ml-auto text-amber-400 hover:text-amber-600 text-xs underline transition"
+                                    >
+                                        Exit Demo
+                                    </button>
+                                </div>
+                            )}
                             <div className="flex items-center justify-between mb-6 shrink-0">
                                 <div className="flex items-center gap-3">
                                     <h2 className="text-slate-800 text-2xl font-bold tracking-tight">Matched Trials</h2>
@@ -216,34 +231,54 @@ export default function Dashboard({
                                     <option value="location">Sort: Location</option>
                                 </select>
                             </div>
-                            {isMatchLoading && (
-                                <div className="flex flex-col gap-4">
+                            {loadingStatus.match ? (
+                                <div className="space-y-4">
                                     {[1, 2, 3].map(i => (
-                                        <div key={i} className="h-36 bg-slate-100 rounded-2xl animate-pulse" />
-                                    ))}
-                                </div>
-                            )}
-                            {!isMatchLoading && matchResults.length === 0 && (
-                                <div className="flex-1 flex flex-col items-center justify-center text-center p-12 bg-white border-2 border-dashed border-teal-100 rounded-3xl shadow-sm">
-                                    <div className="text-[64px] mb-5">🔬</div>
-                                    <p className="text-slate-800 text-lg font-bold mb-1">Waiting for Patient Data</p>
-                                    <p className="text-slate-500 text-sm max-w-sm">Upload a patient record or enable Demo Mode to generate intelligent trial matches.</p>
-                                </div>
-                            )}
-                            {!isMatchLoading && matchResults.length > 0 && (
-                                <div className="flex flex-col gap-4 pb-8">
-                                    {sortedResults.map((result, index) => (
-                                        <div key={result.trial_id} className="anim-fade-up" style={{ animationDelay: `${index * 80}ms` }}>
-                                            <TrialCard
-                                                {...result}
-                                                userRole={currentUser?.role || 'doctor'}
-                                                isSelected={selectedTrial?.trial_id === result.trial_id}
-                                                onSelect={() => setSelectedTrial(result)}
-                                                onViewReport={() => { setSelectedTrial(result); setIsReportOpen(true); }}
-                                            />
+                                        <div
+                                            key={i}
+                                            className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 animate-pulse"
+                                            style={{ animationDelay: `${i * 150}ms` }}
+                                        >
+                                            <div className="flex items-start justify-between">
+                                                <div className="space-y-2">
+                                                    <div className="h-5 bg-slate-200 rounded-lg w-56" />
+                                                    <div className="h-3 bg-slate-100 rounded-full w-32" />
+                                                </div>
+                                                <div className="w-14 h-14 rounded-full bg-slate-200" />
+                                            </div>
+                                            <div className="flex gap-2 mt-4">
+                                                {[1, 2, 3, 4].map(j => (
+                                                    <div key={j} className="h-6 bg-slate-100 rounded-full w-20" />
+                                                ))}
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
+                            ) : (
+                                <>
+                                    {matchResults.length === 0 && (
+                                        <div className="flex-1 flex flex-col items-center justify-center text-center p-12 bg-white border-2 border-dashed border-teal-100 rounded-3xl shadow-sm">
+                                            <div className="text-[64px] mb-5">🔬</div>
+                                            <p className="text-slate-800 text-lg font-bold mb-1">Waiting for Patient Data</p>
+                                            <p className="text-slate-500 text-sm max-w-sm">Upload a patient record or enable Demo Mode to generate intelligent trial matches.</p>
+                                        </div>
+                                    )}
+                                    {matchResults.length > 0 && (
+                                        <div className="flex flex-col gap-4 pb-8">
+                                            {sortedResults.map((result, index) => (
+                                                <div key={result.trial_id} className="anim-fade-up" style={{ animationDelay: `${index * 80}ms` }}>
+                                                    <TrialCard
+                                                        {...result}
+                                                        userRole={currentUser?.role || 'doctor'}
+                                                        isSelected={selectedTrial?.trial_id === result.trial_id}
+                                                        onSelect={() => setSelectedTrial(result)}
+                                                        onViewReport={() => { setSelectedTrial(result); setIsReportOpen(true); }}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </>
                     )}
@@ -396,12 +431,16 @@ export default function Dashboard({
                         <div className="absolute top-0 left-0 h-full w-1 bg-amber-400 rounded-l-xl" />
                         <div className="flex items-center justify-between pl-2 mb-1">
                             <span className="text-amber-800 font-bold text-sm">⚡ Demo Mode</span>
-                            <button
+                            <div
                                 onClick={toggleDemoMode}
-                                className={`w-10 h-5 rounded-full flex items-center p-1 transition-colors duration-300 shadow-inner ${isDemoMode ? 'bg-amber-400' : 'bg-slate-200'}`}
+                                className={`relative w-11 h-6 rounded-full cursor-pointer transition-all duration-300 ${isDemoMode
+                                    ? 'bg-amber-400 shadow-md shadow-amber-400/40'
+                                    : 'bg-slate-200'
+                                    }`}
                             >
-                                <div className={`w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-transform duration-300 ${isDemoMode ? 'translate-x-4' : 'translate-x-0'}`} />
-                            </button>
+                                <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all duration-300 ${isDemoMode ? 'left-5' : 'left-0.5'
+                                    }`} />
+                            </div>
                         </div>
                         <p className="text-amber-700/80 text-[11px] font-medium pl-2">Use simulated patient data for testing.</p>
                     </div>
