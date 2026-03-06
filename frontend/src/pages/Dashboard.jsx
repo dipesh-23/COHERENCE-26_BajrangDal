@@ -271,6 +271,7 @@ export default function Dashboard({
                                         <div key={result.trial_id} className="anim-fade-up" style={{ animationDelay: `${index * 80}ms` }}>
                                             <TrialCard
                                                 {...result}
+                                                userRole={currentUser?.role || 'doctor'}
                                                 isSelected={selectedTrial?.trial_id === result.trial_id}
                                                 onSelect={() => setSelectedTrial(result)}
                                                 onViewReport={() => { setSelectedTrial(result); setIsReportOpen(true); }}
