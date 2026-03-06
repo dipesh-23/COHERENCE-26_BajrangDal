@@ -184,16 +184,26 @@ export default function TrialCard({
                 )}
                 {isPatient ? (
                     <>
-                        <span className="text-slate-400 text-xs">
-                            📍 {location} {distance_string && <span className="font-semibold text-teal-600">({distance_string})</span>}
+                        <span className="text-slate-500 text-xs flex items-center gap-1">
+                            📍 {location}
+                            {distance_string && (
+                                <span className="text-teal-500 font-medium bg-teal-50 border border-teal-100 rounded-full px-2 py-0.5 text-[10px] ml-1">
+                                    • {distance_string}
+                                </span>
+                            )}
                         </span>
                         <span className="text-slate-400 text-xs">🧪 {phase}</span>
                     </>
                 ) : (
                     <>
                         <span className="text-slate-400 text-xs" title={sponsor}>🏢 {truncate(sponsor, 22)}</span>
-                        <span className="text-slate-400 text-xs">
-                            📍 {location} {distance_string && <span className="font-semibold text-teal-600">({distance_string})</span>}
+                        <span className="text-slate-500 text-xs flex items-center gap-1">
+                            📍 {location}
+                            {distance_string && (
+                                <span className="text-teal-500 font-medium bg-teal-50 border border-teal-100 rounded-full px-2 py-0.5 text-[10px] ml-1">
+                                    • {distance_string}
+                                </span>
+                            )}
                         </span>
                     </>
                 )}
