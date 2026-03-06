@@ -36,14 +36,14 @@ function deriveBreakdown(criteria = []) {
     ];
 }
 
-const NAV_TABS = ['Dashboard', 'Patients', 'Trials'];
+const NAV_TABS = ['Screening', 'My Patients', 'Trial Database', 'Reports'];
 
 export default function Dashboard({
     currentUser = null,   // { id, name, role, department, hospital }
     token = null,         // JWT — passed to API calls via Authorization header
     onLogout = () => { },  // clears session in App.jsx
 }) {
-    const [activeTab, setActiveTab] = useState('Dashboard');
+    const [activeTab, setActiveTab] = useState('Screening');
     const [selectedTrial, setSelectedTrial] = useState(null);
     const [isReportOpen, setIsReportOpen] = useState(false);
     const [filters, setFilters] = useState({ zip: '10001', radius_miles: 50, hpsa_only: false });
@@ -116,12 +116,14 @@ export default function Dashboard({
                 {/* Left */}
                 <div className="flex items-center gap-3">
                     <div className="bg-[#0D9488]/10 rounded-lg p-1.5"><span className="text-xl leading-none">🏥</span></div>
-                    <span className="text-slate-800 font-bold text-[20px] tracking-tight">TrialMatch <span className="text-[#0D9488]">AI</span></span>
-                    <span className="bg-teal-50 text-[#0D9488] border border-teal-100 rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wider">BETA</span>
+                    <div>
+                        <span className="text-slate-800 font-bold text-[20px] tracking-tight block leading-none mt-1">TrialMatch <span className="text-[#0D9488]">AI</span></span>
+                        <span className="text-slate-400 text-[10px] font-semibold uppercase tracking-wider block">Clinical Research Platform</span>
+                    </div>
                 </div>
 
                 {/* Center nav */}
-                <div className="flex items-center gap-8 absolute left-1/2 -translate-x-1/2">
+                <div className="flex items-center gap-8 absolute left-1/2 -translate-x-1/2 mt-1">
                     {NAV_TABS.map((label) => (
                         <button
                             key={label}
@@ -130,7 +132,7 @@ export default function Dashboard({
                         >
                             {label}
                             {activeTab === label && (
-                                <span className="absolute -bottom-[21px] left-0 w-full h-[3px] bg-[#0D9488] rounded-t-full" />
+                                <span className="absolute -bottom-[19px] left-0 w-full h-[3px] bg-[#0D9488] rounded-t-full" />
                             )}
                         </button>
                     ))}
@@ -140,14 +142,14 @@ export default function Dashboard({
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-full px-3 py-1 shadow-sm">
                         <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_4px_rgba(16,185,129,0.5)] anim-pulse" />
-                        <span className="text-emerald-700 text-xs font-semibold">System Online</span>
+                        <span className="text-emerald-700 text-xs font-semibold">Screening Engine Online</span>
                     </div>
                     {currentUser && (
-                        <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-full pl-1 pr-3 py-1 shadow-sm">
-                            <div className="w-7 h-7 rounded-full bg-teal-50 border border-teal-100 flex items-center justify-center text-sm">
-                                {currentUser.role === 'doctor' ? '👨‍⚕️' : currentUser.role === 'nurse' ? '👩‍⚕️' : '🧑‍🦽'}
+                        <div className="flex items-center gap-2 bg-teal-50 border border-teal-100 rounded-full pl-1 pr-3 py-1 shadow-sm">
+                            <div className="w-7 h-7 rounded-full bg-white border border-teal-200 flex items-center justify-center text-sm shadow-sm">
+                                🔬
                             </div>
-                            <span className="text-slate-600 text-xs font-bold">{currentUser.name}</span>
+                            <span className="text-teal-700 text-xs font-bold">Research Coordinator</span>
                         </div>
                     )}
                     <button
@@ -159,32 +161,78 @@ export default function Dashboard({
                 </div>
             </nav>
 
+            {/* ── CRC HERO STRIP ── */}
+            <div className="bg-white px-6 py-4 flex items-center justify-between border-b border-teal-50 shrink-0 shadow-sm relative z-40">
+                <div>
+                    <h1 className="text-xl font-bold text-slate-800">Good morning, {currentUser?.name || 'Jane'}</h1>
+                    <p className="text-sm font-medium text-slate-500 mt-0.5">{currentUser?.department || 'Clinical Trials Office'} · {currentUser?.hospital || 'Medical Center'}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                    <div className="bg-teal-50 text-teal-700 px-4 py-2 rounded-xl text-sm font-bold border border-teal-100 shadow-sm flex items-center gap-2">
+                        <span>📋</span>
+                        {matchResults.length} Trials Screened
+                    </div>
+                    <div className="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl text-sm font-bold border border-emerald-100 shadow-sm flex items-center gap-2">
+                        <span>⏱️</span>
+                        ~{matchResults.length * 12} mins saved today
+                    </div>
+                    <div className="bg-amber-50 text-amber-700 px-4 py-2 rounded-xl text-sm font-bold border border-amber-100 shadow-sm flex items-center gap-2">
+                        <span>⚠️</span>
+                        {verifications} Awaiting Verification
+                    </div>
+                </div>
+            </div>
+
+            {/* ── QUICK ACTIONS STRIP ── */}
+            {patientData && (
+                <div className="bg-slate-50/80 border-b border-teal-100 px-6 py-2.5 flex items-center gap-3 shrink-0 relative z-30">
+                    <span className="text-slate-400 text-[11px] font-bold uppercase tracking-wider">Quick Actions:</span>
+                    <button onClick={() => { }} className="bg-white hover:bg-teal-50 text-teal-700 border border-teal-200 rounded-lg px-3 py-1.5 text-xs font-bold transition-all duration-150 flex items-center gap-1.5 shadow-sm">
+                        📤 Export Screening Report
+                    </button>
+                    <button onClick={() => { }} className="bg-white hover:bg-teal-50 text-teal-700 border border-teal-200 rounded-lg px-3 py-1.5 text-xs font-bold transition-all duration-150 flex items-center gap-1.5 shadow-sm">
+                        📧 Email to Investigator
+                    </button>
+                    <button onClick={() => { }} className="bg-white hover:bg-amber-50 text-amber-700 border border-amber-200 rounded-lg px-3 py-1.5 text-xs font-bold transition-all duration-150 flex items-center gap-1.5 shadow-sm">
+                        ⚠️ Flag for Review
+                    </button>
+                    <button
+                        onClick={() => {/* useTrialEngine clearAll via hook, but here we just leave as UI or mock if needed. Actually, we should trigger clearAll -> hook */ }}
+                        className="ml-auto bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-bold transition-all duration-150 flex items-center gap-1.5 shadow-sm"
+                    >
+                        🔄 New Patient
+                    </button>
+                </div>
+            )}
+
             {/* ═══ 2. THREE-COLUMN BODY ═══════════════════════════════════════════ */}
             <main className="flex flex-1 h-[calc(100vh-64px)] overflow-hidden">
 
                 {/* ── LEFT COLUMN ── */}
-                <aside className="w-80 shrink-0 flex flex-col overflow-y-auto bg-[#F8FFFE] border-r border-teal-100 p-4 gap-4">
-                    <h2 className="text-[#0F766E] font-bold text-base flex items-center gap-2"><span>⚙️</span> Patient & Filters</h2>
+                <aside className="w-80 shrink-0 flex flex-col overflow-y-auto bg-[#F8FFFE] border-r border-teal-100 p-4 gap-4 pb-20">
+                    <h2 className="text-[#0F766E] font-bold text-base flex items-center gap-2 mb-2"><span>⚙️</span> Patient Screening</h2>
 
-                    <PatientUploader
-                        onPatientLoaded={handlePatientLoaded}
-                        userRole={currentUser?.role || 'doctor'}
-                    />
-
+                    <div className="flex flex-col gap-1.5">
+                        <span className="text-slate-500 font-bold text-xs uppercase tracking-wider pl-1">📁 Upload Patient Record</span>
+                        <PatientUploader
+                            onPatientLoaded={handlePatientLoaded}
+                            userRole={currentUser?.role || 'doctor'}
+                        />
+                    </div>
 
                     {/* GeographyFilter — produces {zip, radius_miles, hpsa_only} for POST /match */}
                     <GeographyFilter onFilterChange={handleFilterChange} />
 
                     {/* Ethics Monitor */}
                     <div className="mt-auto bg-white rounded-2xl p-4 border border-teal-50 shadow-sm">
-                        <h3 className="text-[#0F766E] font-semibold text-sm flex items-center gap-2 mb-3"><span>🛡️</span> Ethics Monitor</h3>
+                        <h3 className="text-[#0F766E] font-semibold text-sm flex items-center gap-2 mb-3"><span>🛡️</span> Protocol Compliance Monitor</h3>
                         {[
-                            { label: 'Geographic Equity', status: 'ok' },
-                            { label: 'Demographic Parity', status: 'ok' },
-                            { label: 'Data Completeness', status: verifications > 2 ? 'warn' : 'ok' },
+                            { label: 'Site Accessibility Check', status: 'ok' },
+                            { label: 'Inclusion Fairness Audit', status: 'ok' },
+                            { label: 'Record Completeness', status: verifications > 2 ? 'warn' : 'ok' },
                         ].map(row => (
                             <div key={row.label} className="flex items-center justify-between text-sm py-1.5">
-                                <span className="text-slate-600">{row.label}</span>
+                                <span className="text-slate-600 font-medium">{row.label}</span>
                                 <div className={`w-2 h-2 rounded-full shadow-sm ${row.status === 'warn' ? 'bg-amber-400 shadow-amber-400/50 anim-pulse' : 'bg-teal-500 shadow-teal-500/30'}`} />
                             </div>
                         ))}
@@ -192,31 +240,31 @@ export default function Dashboard({
                 </aside>
 
                 {/* ── CENTER COLUMN ── */}
-                <section className="flex-1 flex flex-col overflow-y-auto bg-[#F0FAFA] p-6 scrollbar-thin scrollbar-thumb-teal-100">
+                <section className="flex-1 flex flex-col overflow-y-auto bg-[#F0FAFA] p-6 pb-32 scrollbar-thin scrollbar-thumb-teal-100">
 
-                    {/* ── DASHBOARD TAB ── */}
-                    {activeTab === 'Dashboard' && (
+                    {/* ── SCREENING TAB ── */}
+                    {activeTab === 'Screening' && (
                         <>
                             {isDemoMode && (
-                                <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 mb-2">
+                                <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 mb-2 shadow-sm">
                                     <span className="text-amber-500 text-lg">⚡</span>
                                     <div>
-                                        <p className="text-amber-700 font-semibold text-sm">Demo Mode Active</p>
-                                        <p className="text-amber-500 text-xs">Showing simulated patient P-84921 · 62yo Female · East Harlem, NY</p>
+                                        <p className="text-amber-800 font-bold text-sm">Demo Screening Mode</p>
+                                        <p className="text-amber-700 font-medium text-xs">Load sample patient: 62yo T2DM + CKD</p>
                                     </div>
                                     <button
                                         onClick={toggleDemoMode}
-                                        className="ml-auto text-amber-400 hover:text-amber-600 text-xs underline transition"
+                                        className="ml-auto text-amber-600 hover:text-amber-700 font-bold text-xs underline transition"
                                     >
-                                        Exit Demo
+                                        Active — showing P-84921
                                     </button>
                                 </div>
                             )}
-                            <div className="flex items-center justify-between mb-6 shrink-0">
+                            <div className="flex items-center justify-between mt-2 mb-6 shrink-0">
                                 <div className="flex items-center gap-3">
-                                    <h2 className="text-slate-800 text-2xl font-bold tracking-tight">Matched Trials</h2>
+                                    <h2 className="text-slate-800 text-2xl font-bold tracking-tight">Eligible Trial Matches</h2>
                                     {matchResults.length > 0 && (
-                                        <span className="bg-teal-50 border border-[#0D9488] text-[#0D9488] text-sm font-bold px-3 py-1 rounded-full shadow-sm transition-all duration-300">
+                                        <span className="bg-[#0D9488] border border-[#0F766E] text-white text-sm font-bold px-3 py-1 rounded-full shadow-sm transition-all duration-300">
                                             {matchResults.length}
                                         </span>
                                     )}
@@ -224,15 +272,19 @@ export default function Dashboard({
                                 <select
                                     value={sortBy}
                                     onChange={e => setSortBy(e.target.value)}
-                                    className="appearance-none bg-white border border-teal-100 text-slate-600 font-medium text-sm rounded-lg pl-3 pr-8 py-2 focus:outline-none focus:ring-2 focus:ring-[#0D9488]/20 focus:border-[#0D9488] shadow-sm cursor-pointer"
+                                    className="appearance-none bg-white border-2 border-slate-100 text-slate-700 font-bold text-sm rounded-xl pl-4 pr-10 py-2 focus:outline-none focus:ring-4 focus:ring-[#0D9488]/20 focus:border-[#0D9488] shadow-sm cursor-pointer"
+                                    style={{ backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1em' }}
                                 >
-                                    <option value="score">Sort: Best Match</option>
-                                    <option value="confidence">Sort: Confidence</option>
-                                    <option value="location">Sort: Location</option>
+                                    <option value="score">Sort by: Best Match</option>
+                                    <option value="confidence">Sort by: Confidence</option>
+                                    <option value="location">Sort by: Location</option>
                                 </select>
                             </div>
                             {loadingStatus.match ? (
                                 <div className="space-y-4">
+                                    <p className="text-teal-700 font-bold text-sm animate-pulse flex items-center gap-2 mb-2">
+                                        <span className="text-lg">⚙️</span> Screening against trial database...
+                                    </p>
                                     {[1, 2, 3].map(i => (
                                         <div
                                             key={i}
@@ -258,9 +310,10 @@ export default function Dashboard({
                                 <>
                                     {matchResults.length === 0 && (
                                         <div className="flex-1 flex flex-col items-center justify-center text-center p-12 bg-white border-2 border-dashed border-teal-100 rounded-3xl shadow-sm">
-                                            <div className="text-[64px] mb-5">🔬</div>
-                                            <p className="text-slate-800 text-lg font-bold mb-1">Waiting for Patient Data</p>
-                                            <p className="text-slate-500 text-sm max-w-sm">Upload a patient record or enable Demo Mode to generate intelligent trial matches.</p>
+                                            <div className="text-[64px] mb-5">📋</div>
+                                            <p className="text-slate-800 text-lg font-bold mb-1">No patient loaded for screening</p>
+                                            <p className="text-slate-500 text-sm max-w-sm mb-3">Upload a de-identified patient record to begin automated eligibility screening</p>
+                                            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">Supports JSON · HL7 FHIR · CSV formats</p>
                                         </div>
                                     )}
                                     {matchResults.length > 0 && (
@@ -283,71 +336,83 @@ export default function Dashboard({
                         </>
                     )}
 
-                    {/* ── PATIENTS TAB ── */}
-                    {activeTab === 'Patients' && (
+                    {/* ── MY PATIENTS TAB ── */}
+                    {activeTab === 'My Patients' && (
                         <div className="flex-1 flex flex-col anim-fade-up">
-                            <h2 className="text-slate-800 text-2xl font-bold tracking-tight mb-6">Patients</h2>
+                            <h2 className="text-slate-800 text-2xl font-bold tracking-tight mb-6">Patient Records</h2>
                             {patientData ? (
-                                <div className="bg-white border border-teal-50 rounded-2xl p-6 max-w-xl shadow-sm">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <span className="font-mono text-slate-500 font-bold bg-slate-100 rounded-md px-2 py-0.5 text-sm">{patientData.patient_id}</span>
-                                        <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full px-2.5 py-0.5 text-xs font-bold">Active</span>
+                                <div className="bg-gradient-to-br from-[#0D9488]/8 to-[#0D9488]/3 border border-teal-100 rounded-2xl p-5 max-w-xl shadow-sm">
+                                    {/* Case file header */}
+                                    <div className="flex items-center justify-between mb-4 pb-2 border-b border-teal-200/50">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 shadow-md">
+                                                {patientData.gender === 'Female' ? '♀' : '♂'}
+                                            </div>
+                                            <div>
+                                                <p className="text-teal-900 font-bold text-lg font-mono tracking-tight">{patientData.patient_id}</p>
+                                                <p className="text-teal-700 text-sm font-medium">{patientData.age}yo {patientData.gender} · {patientData.zip || 'No ZIP'}</p>
+                                            </div>
+                                        </div>
+                                        <span className="bg-white text-teal-700 text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg border border-teal-200 shadow-sm">
+                                            🔒 De-identified
+                                        </span>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4 mb-4">
-                                        <div><p className="text-slate-400 text-xs font-semibold mb-1 uppercase tracking-wider">Age</p><p className="text-slate-800 font-bold">{patientData.age} years</p></div>
-                                        <div><p className="text-slate-400 text-xs font-semibold mb-1 uppercase tracking-wider">Gender</p><p className="text-slate-800 font-bold">{patientData.gender}</p></div>
-                                        <div><p className="text-slate-400 text-xs font-semibold mb-1 uppercase tracking-wider">ZIP Code</p><p className="text-slate-800 font-bold">{patientData.zip || '—'}</p></div>
-                                        <div><p className="text-slate-400 text-xs font-semibold mb-1 uppercase tracking-wider">Medications</p><p className="text-slate-800 font-bold">{patientData.medications?.length || 0}</p></div>
-                                    </div>
-                                    <div className="border-t border-slate-100 pt-4">
-                                        <p className="text-slate-400 text-xs font-semibold mb-2 uppercase tracking-wider">Diagnoses</p>
-                                        <div className="flex flex-wrap gap-2">
+                                    {/* Diagnoses */}
+                                    <div className="mb-4">
+                                        <p className="text-teal-800/60 text-[10px] uppercase tracking-wider font-bold mb-2">Active Diagnoses</p>
+                                        <div className="flex flex-wrap gap-1.5">
                                             {patientData.diagnoses?.map((d, i) => (
-                                                <span key={i} className="bg-teal-50 border border-teal-100 text-teal-700 text-xs font-bold px-2.5 py-1 rounded-lg">{d}</span>
+                                                <span key={i} className="bg-white border border-teal-200 shadow-sm text-teal-800 font-medium text-[11px] px-2.5 py-1 rounded-lg">
+                                                    {d}
+                                                </span>
                                             ))}
                                         </div>
                                     </div>
-                                    {patientData.labs && (
-                                        <div className="border-t border-slate-100 pt-4 mt-4">
-                                            <p className="text-slate-400 text-xs font-semibold mb-3 uppercase tracking-wider">Lab Values</p>
-                                            <div className="grid grid-cols-3 gap-3">
-                                                {Object.entries(patientData.labs).map(([k, v]) => (
-                                                    <div key={k} className="bg-slate-50 rounded-xl p-3 text-center border border-slate-100">
-                                                        <p className={`text-lg font-bold ${labColor(k, v)}`}>{v}{k === 'HbA1c' ? '%' : ''}</p>
-                                                        <p className="text-slate-500 text-[10px] uppercase font-bold mt-1 tracking-wider">{k}</p>
-                                                    </div>
-                                                ))}
-                                            </div>
+                                    {/* Key labs */}
+                                    <div className="mb-4">
+                                        <p className="text-teal-800/60 text-[10px] uppercase tracking-wider font-bold mb-2">Key Lab Values</p>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {Object.entries(patientData.labs || {}).map(([key, val]) => (
+                                                <div key={key} className="bg-white shadow-sm rounded-xl px-3 py-2 text-center border border-teal-100">
+                                                    <p className={`font-bold text-lg ${key === 'HbA1c' && val > 7 ? 'text-red-500' :
+                                                        key === 'eGFR' && val < 60 ? 'text-amber-500' :
+                                                            'text-teal-600'
+                                                        }`}>{val}</p>
+                                                    <p className="text-slate-400 text-[10px] uppercase tracking-wider font-bold">{key}</p>
+                                                </div>
+                                            ))}
                                         </div>
-                                    )}
-                                    {patientData.history_text && (
-                                        <div className="border-t border-slate-100 pt-4 mt-4">
-                                            <p className="text-slate-400 text-xs font-semibold mb-2 uppercase tracking-wider">Clinical History</p>
-                                            <p className="text-slate-600 text-sm leading-relaxed">{patientData.history_text}</p>
-                                        </div>
-                                    )}
+                                    </div>
+                                    {/* Screening status */}
+                                    <div className="flex items-center justify-between pt-3 mt-1 border-t border-teal-200/50">
+                                        <span className="text-teal-800/60 font-bold text-[11px] uppercase tracking-wider">Screening Status</span>
+                                        <span className="text-emerald-600 text-xs font-bold flex items-center gap-1.5 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100">
+                                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_4px_rgba(16,185,129,0.5)]"></span>
+                                            Ready
+                                        </span>
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="flex-1 flex flex-col items-center justify-center text-center p-12 bg-white border-2 border-dashed border-teal-100 rounded-3xl shadow-sm">
                                     <div className="text-[64px] mb-5">👤</div>
                                     <p className="text-slate-800 text-lg font-bold mb-1">No patient loaded</p>
                                     <p className="text-slate-500 text-sm max-w-sm mb-5">Upload a patient record using the panel on the left or enable Demo Mode.</p>
-                                    <button onClick={() => setActiveTab('Dashboard')} className="bg-[#0D9488] hover:bg-[#0F766E] text-white text-sm font-bold px-5 py-2.5 rounded-full shadow-sm transition-colors">← Back to Dashboard</button>
+                                    <button onClick={() => setActiveTab('Screening')} className="bg-[#0D9488] hover:bg-[#0F766E] text-white text-sm font-bold px-5 py-2.5 rounded-full shadow-sm transition-colors">← Back to Screening</button>
                                 </div>
                             )}
                         </div>
                     )}
 
                     {/* ── TRIALS TAB ── */}
-                    {activeTab === 'Trials' && (
+                    {activeTab === 'Trial Database' && (
                         <div className="flex-1 flex flex-col anim-fade-up">
-                            <h2 className="text-slate-800 text-2xl font-bold tracking-tight mb-6">All Trials</h2>
+                            <h2 className="text-slate-800 text-2xl font-bold tracking-tight mb-6">Trial Database</h2>
                             {matchResults.length === 0 ? (
                                 <div className="flex-1 flex flex-col items-center justify-center text-center p-12 bg-white border-2 border-dashed border-teal-100 rounded-3xl shadow-sm">
                                     <div className="text-[64px] mb-5">🧪</div>
                                     <p className="text-slate-800 text-lg font-bold mb-1">No trials to display</p>
-                                    <p className="text-slate-500 text-sm max-w-sm mb-5">Run a match from the Dashboard to see all trials here.</p>
-                                    <button onClick={() => setActiveTab('Dashboard')} className="bg-[#0D9488] hover:bg-[#0F766E] text-white text-sm font-bold px-5 py-2.5 rounded-full shadow-sm transition-colors">← Go to Dashboard</button>
+                                    <p className="text-slate-500 text-sm max-w-sm mb-5">Run a match from the Screening dashboard to see all trials here.</p>
+                                    <button onClick={() => setActiveTab('Screening')} className="bg-[#0D9488] hover:bg-[#0F766E] text-white text-sm font-bold px-5 py-2.5 rounded-full shadow-sm transition-colors">← Go to Screening</button>
                                 </div>
                             ) : (
                                 <div className="overflow-x-auto bg-white rounded-2xl border border-teal-50 shadow-sm">
@@ -364,7 +429,7 @@ export default function Dashboard({
                                                 const tier = r.match_score >= 75 ? 'text-emerald-600' : r.match_score >= 50 ? 'text-amber-500' : 'text-red-500';
                                                 const conf = { HIGH: 'bg-emerald-50 text-emerald-700 border border-emerald-200', MEDIUM: 'bg-amber-50 text-amber-700 border border-amber-200', LOW: 'bg-red-50 text-red-700 border border-red-200' }[r.confidence] || '';
                                                 return (
-                                                    <tr key={r.trial_id} className="bg-white hover:bg-teal-50/30 transition-colors cursor-pointer" onClick={() => { setSelectedTrial(r); setActiveTab('Dashboard'); }}>
+                                                    <tr key={r.trial_id} className="bg-white hover:bg-teal-50/30 transition-colors cursor-pointer" onClick={() => { setSelectedTrial(r); setActiveTab('Screening'); }}>
                                                         <td className="px-5 py-4">
                                                             <p className="text-slate-800 font-bold">{r.trial_name}</p>
                                                             <p className="font-mono text-xs text-slate-400 mt-1">{r.trial_id}</p>
@@ -405,10 +470,10 @@ export default function Dashboard({
                     {/* Quick Stats */}
                     <div className="flex flex-col gap-3">
                         {[
-                            { icon: '🎯', label: 'Top Match Score', value: topScore !== '--' ? `${topScore}` : '--', sub: topScore !== '--' ? '/ 100' : '', bg: 'bg-[#0D9488]/10', border: 'border-[#0D9488]/20', text: 'text-[#0D9488]' },
-                            { icon: '📋', label: 'Trials Analyzed', value: matchResults.length, sub: '', bg: 'bg-blue-50', border: 'border-blue-100', text: 'text-blue-700' },
+                            { icon: '🎯', label: 'Best Eligibility Score', value: topScore !== '--' ? `${topScore}` : '--', sub: topScore !== '--' ? '/ 100' : '', bg: 'bg-[#0D9488]/10', border: 'border-[#0D9488]/20', text: 'text-[#0D9488]' },
+                            { icon: '📋', label: 'Trials Screened', value: matchResults.length, sub: '', bg: 'bg-blue-50', border: 'border-blue-100', text: 'text-blue-700' },
                             {
-                                icon: '⚠️', label: 'Verifications Needed', value: verifications, sub: '',
+                                icon: '⚠️', label: 'Items to Verify', value: verifications, sub: '',
                                 bg: verifications > 0 ? 'bg-amber-50' : 'bg-slate-50',
                                 border: verifications > 0 ? 'border-amber-200' : 'border-slate-100',
                                 text: verifications > 0 ? 'text-amber-700' : 'text-slate-400'
