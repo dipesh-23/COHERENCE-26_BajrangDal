@@ -54,12 +54,12 @@ export default function Dashboard({
     // ── Engine: all data + API calls come from here ──
     const {
         matchTrials,
-        patientData, setPatientData,
+        patientData,
         matchResults,
         loadingStatus,
         isDemoMode,
         toggleDemoMode,
-    } = useTrialEngine();
+    } = useTrialEngine(token);
 
     // ── Sorted results ──
     const sortedResults = useMemo(() => {
