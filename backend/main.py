@@ -1,4 +1,6 @@
 from typing import Optional
+import csv
+import io
 import uuid
 import os
 import shutil
@@ -9,7 +11,7 @@ from pydantic import ValidationError
 
 from models.patient import Patient
 from models.trial import Trial
-from modules.anonymizer import anonymize_patient, parse_trial_pdf
+from modules.anonymizer import anonymize_patient, parse_trial_pdf, fetch_trial_from_gov
 
 app = FastAPI(
     title="Clinical Trial Matching API",
@@ -143,3 +145,99 @@ async def ingest_trial(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Trial data validation failed: {e.errors()}",
         )
+
+
+@app.get(
+    "/fetch/trial/{nct_id}",
+    response_model=Trial,
+    status_code=status.HTTP_200_OK,
+    summary="Fetch clinical trial criteria from ClinicalTrials.gov",
+)
+def fetch_trial(nct_id: str):
+    """
+    Fetches trial metadata and eligibility criteria from ClinicalTrials.gov API v2.
+    """
+    trial_data = fetch_trial_from_gov(nct_id)
+    if "error" in trial_data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=trial_data["error"],
+        )
+    
+    try:
+        trial = Trial(**trial_data)
+        return trial
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Trial data validation failed: {e.errors()}",
+        )
+
+
+@app.post(
+    "/ingest/patients/bulk",
+    status_code=status.HTTP_200_OK,
+    summary="Bulk ingest patients from a CSV file",
+)
+async def ingest_patients_bulk(file: UploadFile = File(...)):
+    """
+    Accepts a CSV upload with columns:
+        patient_id, age, gender, zip_code, diagnoses (pipe-sep),
+        medications (pipe-sep), HbA1c, eGFR, creatinine, history_text
+
+    Each row is parsed into a Patient model, anonymised, and logged.
+    Rows that fail validation are skipped and counted.
+    """
+    if not file.filename.lower().endswith(".csv"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Uploaded file must be a .csv",
+        )
+
+    content = await file.read()
+    text = content.decode("utf-8", errors="replace")
+    reader = csv.DictReader(io.StringIO(text))
+
+    results = []
+    failed = 0
+
+    for row in reader:
+        try:
+            # Parse pipe-separated list columns
+            diagnoses = [d.strip() for d in row.get("diagnoses", "").split("|") if d.strip()]
+            medications = [m.strip() for m in row.get("medications", "").split("|") if m.strip()]
+
+            # Build labs dict from individual CSV columns
+            labs: dict[str, float] = {}
+            for lab_col in ("HbA1c", "eGFR", "creatinine"):
+                raw = row.get(lab_col, "").strip()
+                if raw:
+                    try:
+                        labs[lab_col] = float(raw)
+                    except ValueError:
+                        pass  # skip unparseable lab values
+
+            patient = Patient(
+                patient_id=row["patient_id"].strip(),
+                age=int(row["age"]),
+                gender=row["gender"].strip(),
+                zip_code=row["zip_code"].strip(),
+                diagnoses=diagnoses,
+                labs=labs,
+                medications=medications,
+                history_text=row.get("history_text", "").strip(),
+            )
+
+            anonymised = anonymize_patient(patient.model_dump())
+            results.append(anonymised)
+
+        except Exception:
+            failed += 1
+            continue
+
+    return {
+        "total_uploaded": len(results) + failed,
+        "successfully_anonymized": len(results),
+        "failed": failed,
+        "patients": results,
+    }
