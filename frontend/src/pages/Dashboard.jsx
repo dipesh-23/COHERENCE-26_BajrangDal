@@ -448,6 +448,7 @@ export default function Dashboard({
                 isOpen={isReportOpen}
                 onClose={() => setIsReportOpen(false)}
                 report={selectedTrial}
+                userRole={currentUser?.role || 'doctor'}
             />
         </div>
     );

@@ -1,308 +1,344 @@
 import React, { useState, useEffect } from 'react';
 
-// ─── Default Mock Data (swap with real backend response from GET /report/{patient_id}/{trial_id}) ───
-const DEFAULT_REPORT = {
-    patient_id: "P-84921",
-    trial_id: "NCT-2026-001",
-    trial_name: "EMBARK-T2DM Phase III",
-    match_score: 87,
-    confidence: "HIGH",
-    criteria_breakdown: [
-        { name: "Age 40-65", status: "met", detail: "Age 52 within range" },
-        { name: "T2DM Diagnosis", status: "met", detail: "ICD E11.9 confirmed" },
-        { name: "HbA1c >7%", status: "met", detail: "8.2% recorded" },
-        { name: "Metformin Use", status: "met", detail: "Active prescription" },
-        { name: "eGFR ≥60", status: "verify", detail: "71 recorded, confirm needed" },
-        { name: "No Insulin", status: "met", detail: "Not in medications" }
-    ],
-    missing_data: ["eGFR lab confirmation"],
-    exclusion_flags: [],
-    narrative_text: "Strong metabolic profile match. Patient shows consistent alignment with primary inclusion criteria for EMBARK-T2DM.",
-    recommendation: "Proceed",
-    llm_explanation: "Patient P-84921 aligns strongly with EMBARK-T2DM criteria based on confirmed T2DM diagnosis (ICD E11.9), elevated HbA1c of 8.2% meeting the >7% threshold, and current Metformin prescription. Age of 52 falls within the target 40–65 range. The only pending item is an eGFR lab confirmation—current recorded value of 71 meets the ≥60 threshold but requires an official lab report for enrolment eligibility."
-};
-
-// ─── Score tier helper ─────────────────────────────────────────────────────────
-function getScoreTier(score) {
-    if (score >= 75) return { color: '#10B981', border: 'border-emerald-500' };
-    if (score >= 50) return { color: '#F59E0B', border: 'border-amber-500' };
-    return { color: '#EF4444', border: 'border-red-500' };
+// ─── Score tier ───────────────────────────────────────────────────────────────
+function getTier(score) {
+    if (score >= 75) return { color: '#0D9488', label: 'Strong Match' };
+    if (score >= 50) return { color: '#F59E0B', label: 'Partial Match' };
+    return { color: '#EF4444', label: 'Weak Match' };
 }
 
-// ─── Confidence badge helper ───────────────────────────────────────────────────
-function ConfidencePill({ confidence }) {
-    const map = {
-        HIGH: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-        MEDIUM: 'bg-amber-500/20  text-amber-400  border-amber-500/30',
-        LOW: 'bg-red-500/20    text-red-400    border-red-500/30',
-    };
-    const icon = { HIGH: '✅', MEDIUM: '⚠️', LOW: '🔴' }[confidence] || '';
+// ─── Small score ring in header ───────────────────────────────────────────────
+function MiniRing({ score }) {
+    const tier = getTier(score);
+    const deg = (score / 100) * 360;
     return (
-        <span className={`text-[11px] font-bold uppercase tracking-wider border px-2.5 py-1 rounded-full ${map[confidence] || 'bg-slate-700 text-slate-300 border-slate-600'}`}>
-            {icon} {confidence}
-        </span>
-    );
-}
-
-// ─── Recommendation pill helper ───────────────────────────────────────────────
-function RecommendationPill({ recommendation }) {
-    const map = {
-        'Proceed': 'bg-emerald-100 text-emerald-800 border-emerald-300',
-        'Verify Fields First': 'bg-amber-100  text-amber-800  border-amber-300',
-        'Not Suitable': 'bg-red-100    text-red-800    border-red-300',
-    };
-    return (
-        <span className={`text-xs font-bold uppercase tracking-wider border px-3 py-1.5 rounded-full ${map[recommendation] || 'bg-slate-100 text-slate-700 border-slate-200'}`}>
-            {recommendation}
-        </span>
-    );
-}
-
-// ─── Mini score ring (SVG, matches TrialCard style) ───────────────────────────
-function ScoreRing({ score }) {
-    const tier = getScoreTier(score);
-    const r = 22;
-    const circ = 2 * Math.PI * r;
-    const offset = circ - (circ * score) / 100;
-    return (
-        <div className="relative w-[52px] h-[52px] shrink-0 flex items-center justify-center">
-            <svg className="absolute inset-0 -rotate-90" width="52" height="52">
-                <circle cx="26" cy="26" r={r} fill="none" stroke="#334155" strokeWidth="5" />
-                <circle cx="26" cy="26" r={r} fill="none" stroke={tier.color} strokeWidth="5"
-                    strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" />
-            </svg>
-            <div className="z-10 flex flex-col items-center">
-                <span className="text-[13px] font-extrabold leading-none" style={{ color: tier.color }}>{score}</span>
-                <span className="text-[7px] text-slate-400 uppercase tracking-tight">Match</span>
+        <div className="relative w-14 h-14 shrink-0 flex items-center justify-center">
+            <div className="absolute inset-0 rounded-full"
+                style={{ background: `conic-gradient(white ${deg}deg, rgba(255,255,255,0.2) ${deg}deg)` }} />
+            <div className="absolute inset-[5px] rounded-full flex flex-col items-center justify-center"
+                style={{ background: 'rgba(13,148,136,0.85)' }}>
+                <span className="text-white font-black text-[13px] leading-none">{score}</span>
+                <span className="text-white/70 text-[8px]">/ 100</span>
             </div>
         </div>
     );
 }
 
-// ─── AccordionSection ─────────────────────────────────────────────────────────
-function AccordionSection({ id, title, icon, borderColor, count, children, defaultOpen = true }) {
+// ─── Recommendation pill ──────────────────────────────────────────────────────
+function RecPill({ recommendation, isPatient }) {
+    const map = {
+        'Proceed': { cls: 'bg-gradient-to-r from-[#0D9488] to-[#0F766E] text-white', icon: '🎉', patient: '🎉 Great news! You may be eligible' },
+        'Verify First': { cls: 'bg-amber-400 text-white', icon: '🔍', patient: '🔍 A few things need to be checked' },
+        'Not Suitable': { cls: 'bg-red-500 text-white', icon: '⛔', patient: 'This trial may not be the right fit right now' },
+    };
+    const r = map[recommendation] || map['Proceed'];
+    return (
+        <span className={`rounded-full px-4 py-1.5 text-xs font-bold shadow-sm ${r.cls}`}>
+            {isPatient ? r.patient : `${r.icon} ${recommendation}`}
+        </span>
+    );
+}
+
+// ─── Accordion section wrapper ────────────────────────────────────────────────
+function Section({ borderColor, title, badge, children, defaultOpen = true }) {
     const [open, setOpen] = useState(defaultOpen);
     return (
-        <div className={`bg-white rounded-xl border-l-4 ${borderColor} shadow-sm overflow-hidden`}>
+        <div className="bg-white rounded-xl border-l-4 shadow-sm overflow-hidden mb-3"
+            style={{ borderLeftColor: borderColor }}>
             <button
-                className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-50 transition-colors duration-150"
                 onClick={() => setOpen(o => !o)}
+                className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 transition-colors"
             >
                 <div className="flex items-center gap-2">
-                    <span>{icon}</span>
                     <span className="font-bold text-slate-800 text-sm">{title}</span>
-                    <span className="bg-slate-100 text-slate-500 text-[10px] font-bold px-2 py-0.5 rounded-full border border-slate-200">{count}</span>
+                    {badge != null && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white"
+                            style={{ backgroundColor: borderColor }}>{badge}</span>
+                    )}
                 </div>
-                <svg
-                    className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${open ? '' : 'rotate-180'}`}
-                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
+                <svg className="w-4 h-4 text-slate-400 transition-transform duration-200"
+                    style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
             </button>
-            <div
-                className="transition-all duration-300 ease-in-out overflow-hidden"
-                style={{ maxHeight: open ? '1000px' : '0px', opacity: open ? 1 : 0 }}
-            >
-                <div className="px-4 pb-4 pt-1 space-y-2">
-                    {children}
-                </div>
+            <div style={{
+                maxHeight: open ? '2000px' : '0',
+                overflow: 'hidden',
+                transition: 'max-height 300ms ease-in-out'
+            }}>
+                <div className="px-5 pb-4">{children}</div>
             </div>
         </div>
     );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// ─── Criteria row ─────────────────────────────────────────────────────────────
+function CriteriaRow({ c, isNurse, isPatient }) {
+    const map = {
+        met: { icon: '✅', bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-100', label: isPatient ? '✅ You meet this requirement' : 'Met' },
+        verify: { icon: '⚠️', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-100', label: isPatient ? '⚠️ Your doctor needs to confirm this' : 'Verify' },
+        unmet: { icon: '❌', bg: 'bg-red-50', text: 'text-red-600', border: 'border-red-100', label: isPatient ? '❌ This requirement is not currently met' : 'Not Met' },
+    };
+    const s = map[c.status] || map.verify;
+    return (
+        <div className={`flex items-start justify-between gap-3 rounded-lg p-3 border ${s.bg} ${s.border} mb-2`}>
+            <div className="flex-1">
+                <p className="text-slate-800 text-sm font-semibold">{isPatient ? c.name.replace(/ICD\s[\w.]+/g, '').trim() : c.name}</p>
+                <p className="text-slate-500 text-xs mt-0.5">{c.detail}</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+                <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold border ${s.bg} ${s.text} ${s.border}`}>
+                    {s.label}
+                </span>
+                {isNurse && c.status === 'verify' && (
+                    <button
+                        onClick={e => e.stopPropagation()}
+                        className="bg-teal-500 hover:bg-teal-400 text-white rounded-full px-2 py-0.5 text-xs font-bold transition-colors"
+                    >
+                        Mark Verified ✓
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 export default function MatchReport({
     isOpen = false,
     onClose = () => { },
-    // report will be injected from Dashboard.jsx → GET /report/{patient_id}/{trial_id}
-    // Falls back to mock data for isolated development/testing
-    report = null,
+    report = null,      // TransparencyReport | null
+    userRole = 'doctor',
 }) {
-    const data = report || DEFAULT_REPORT;
-
-    const [mounted, setMounted] = useState(false);
-    const [feedback, setFeedback] = useState(null); // 'up' | 'down' | null
-
-    useEffect(() => {
-        if (isOpen) {
-            setTimeout(() => setMounted(true), 10);
-        } else {
-            setMounted(false);
-        }
-    }, [isOpen]);
-
-    // Prevent body scroll when open
+    // Body scroll lock
     useEffect(() => {
         if (isOpen) document.body.style.overflow = 'hidden';
         else document.body.style.overflow = '';
         return () => { document.body.style.overflow = ''; };
     }, [isOpen]);
 
-    if (!isOpen) return null;
-    if (!data) return null;
+    // Handle ESC key
+    useEffect(() => {
+        const handler = e => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [onClose]);
 
-    // ── Derive sections from criteria_breakdown ──
-    const metItems = (data.criteria_breakdown || []).filter(c => c.status === 'met');
-    const unmetItems = (data.criteria_breakdown || []).filter(c => c.status === 'unmet');
-    const verifyItems = (data.criteria_breakdown || []).filter(c => c.status === 'verify');
-    const exclusions = data.exclusion_flags || [];
+    if (!isOpen || !report) return null;
 
-    const handleBackdropClick = (e) => {
-        if (e.target === e.currentTarget) onClose();
-    };
+    const isDoctor = userRole === 'doctor';
+    const isNurse = userRole === 'nurse';
+    const isPatient = userRole === 'patient';
+
+    const met = report.criteria_breakdown?.filter(c => c.status === 'met') || [];
+    const verify = report.criteria_breakdown?.filter(c => c.status === 'verify') || [];
+    const unmet = report.criteria_breakdown?.filter(c => c.status === 'unmet') || [];
+    const excl = report.exclusion_flags || [];
+
+    const tier = getTier(report.match_score);
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity duration-200"
-            style={{ opacity: mounted ? 1 : 0 }}
-            onClick={handleBackdropClick}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ animation: 'fadeIn 0.2s ease-out' }}
         >
             <style>{`
-        .mr-scrollbar::-webkit-scrollbar { width: 6px; }
-        .mr-scrollbar::-webkit-scrollbar-track { background: #E2E8F0; border-radius: 9999px; }
-        .mr-scrollbar::-webkit-scrollbar-thumb { background: #3B82F6; border-radius: 9999px; }
+        @keyframes fadeIn   { from { opacity:0; } to { opacity:1; } }
+        @keyframes scaleIn  { from { opacity:0; transform:scale(0.95); } to { opacity:1; transform:scale(1); } }
+        .modal-in { animation: scaleIn 0.2s ease-out; }
+        .scrollbar-teal::-webkit-scrollbar { width: 6px; }
+        .scrollbar-teal::-webkit-scrollbar-track { background: #f0fdfc; border-radius: 9999px; }
+        .scrollbar-teal::-webkit-scrollbar-thumb { background: #5eead4; border-radius: 9999px; }
+        .scrollbar-teal::-webkit-scrollbar-thumb:hover { background: #0d9488; }
       `}</style>
 
-            {/* ── Modal Shell ── */}
+            {/* Backdrop */}
             <div
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] flex flex-col overflow-hidden transition-all duration-200 ease-out"
-                style={{ transform: mounted ? 'scale(1)' : 'scale(0.95)', opacity: mounted ? 1 : 0 }}
-            >
-                {/* ── 3. STICKY HEADER ── */}
-                <div className="bg-slate-900 px-6 py-4 flex items-center gap-4 shrink-0">
-                    {/* Left */}
-                    <div className="bg-blue-500 rounded-lg p-1.5 shrink-0">
-                        <span className="text-xl leading-none">🔬</span>
-                    </div>
+                className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                onClick={onClose}
+            />
+
+            {/* Panel */}
+            <div className={`relative w-full max-w-3xl max-h-[90vh] flex flex-col bg-white shadow-2xl z-10 modal-in
+        ${isPatient ? 'rounded-3xl' : 'rounded-2xl'}`}>
+
+                {/* ── STICKY HEADER ── */}
+                <div className="sticky top-0 z-20 bg-gradient-to-r from-[#0D9488] to-[#0F766E] rounded-t-2xl px-6 py-4 flex items-center gap-4">
+                    {/* Left: icon + trial info */}
+                    <div className="text-2xl shrink-0">🔬</div>
                     <div className="flex-1 min-w-0">
-                        <h2 className="text-white font-bold text-base leading-tight truncate">{data.trial_name}</h2>
-                        <span className="text-blue-400 text-sm font-mono">{data.trial_id}</span>
-                    </div>
-
-                    {/* Center */}
-                    <ScoreRing score={data.match_score} />
-
-                    {/* Right */}
-                    <ConfidencePill confidence={data.confidence} />
-                    <button
-                        onClick={onClose}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 hover:rotate-90 transition-all duration-300 shrink-0 ml-1"
-                        aria-label="Close"
-                    >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
-
-                {/* ── 4. SCROLLABLE BODY ── */}
-                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3 bg-slate-50 mr-scrollbar">
-
-                    {/* Section A — Inclusion Met */}
-                    <AccordionSection id="met" title="Inclusion Met" icon="✅" borderColor="border-emerald-500" count={metItems.length}>
-                        {metItems.length === 0 ? (
-                            <p className="text-slate-400 text-sm italic">None</p>
-                        ) : metItems.map((c, i) => (
-                            <div key={i} className="flex items-start gap-3 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2.5">
-                                <span className="text-emerald-500 mt-0.5">✓</span>
-                                <div>
-                                    <p className="text-slate-800 font-semibold text-sm">{c.name}</p>
-                                    <p className="text-slate-500 text-xs mt-0.5">{c.detail}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </AccordionSection>
-
-                    {/* Section B — Inclusion Unmet */}
-                    <AccordionSection id="unmet" title="Inclusion Unmet" icon="❌" borderColor="border-red-500" count={unmetItems.length}>
-                        {unmetItems.length === 0 ? (
-                            <p className="text-slate-400 text-sm italic">None</p>
-                        ) : unmetItems.map((c, i) => (
-                            <div key={i} className="flex items-start gap-3 bg-red-50 border border-red-100 rounded-lg px-3 py-2.5">
-                                <span className="text-red-500 mt-0.5">✗</span>
-                                <div>
-                                    <p className="text-slate-800 font-semibold text-sm">{c.name}</p>
-                                    <p className="text-slate-500 text-xs mt-0.5">{c.detail}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </AccordionSection>
-
-                    {/* Section C — Exclusion Flags */}
-                    <AccordionSection id="exclusions" title="Exclusion Flags" icon="🚫" borderColor="border-red-900" count={exclusions.length}>
-                        {exclusions.length === 0 ? (
-                            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2.5">
-                                <span className="text-emerald-500">✓</span>
-                                <span className="text-emerald-700 font-semibold text-sm">None Triggered</span>
-                            </div>
-                        ) : exclusions.map((flag, i) => (
-                            <div key={i} className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
-                                <span className="text-red-600 mt-0.5">⛔</span>
-                                <p className="text-red-700 font-semibold text-sm">{flag}</p>
-                            </div>
-                        ))}
-                    </AccordionSection>
-
-                    {/* Section D — Requires Verification */}
-                    <AccordionSection id="verify" title="Requires Verification" icon="⚠️" borderColor="border-amber-500" count={verifyItems.length}>
-                        {verifyItems.length === 0 ? (
-                            <p className="text-slate-400 text-sm italic">None</p>
-                        ) : verifyItems.map((c, i) => (
-                            <div key={i} className="flex items-center gap-3 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2.5">
-                                <span className="text-amber-500 mt-0.5 shrink-0">⚠</span>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-slate-800 font-semibold text-sm">{c.name}</p>
-                                    <p className="text-slate-500 text-xs mt-0.5">{c.detail}</p>
-                                </div>
-                                <span className="shrink-0 text-[10px] font-bold bg-amber-500 text-white px-2 py-1 rounded-full whitespace-nowrap shadow-sm">
-                                    Contact GP →
-                                </span>
-                            </div>
-                        ))}
-                    </AccordionSection>
-
-                    {/* Section E — AI Reasoning */}
-                    <AccordionSection id="ai" title="AI Reasoning" icon="🧠" borderColor="border-purple-500" count={1}>
-                        <p className="text-slate-500 text-sm italic mb-3">{data.narrative_text}</p>
-                        <blockquote className="border-l-4 border-purple-500 pl-4 py-2 bg-purple-50 rounded-r-lg">
-                            <p className="text-slate-700 text-sm italic leading-relaxed">"{data.llm_explanation}"</p>
-                        </blockquote>
-                        <div className="mt-3 flex items-center gap-1.5">
-                            <span className="text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200 px-2.5 py-1 rounded-full">
-                                🧠 Powered by BioGPT + Sentence-Transformers
+                        <h2 className="text-white font-bold text-base leading-tight truncate">
+                            {isPatient ? 'Your Trial Match Report' : report.trial_name}
+                        </h2>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                            {!isPatient && (
+                                <span className="font-mono text-white/70 text-xs">{report.trial_id}</span>
+                            )}
+                            <span className="text-white/60 text-xs">
+                                Patient: <span className="text-white/90 font-mono">{report.patient_id}</span>
                             </span>
                         </div>
-                    </AccordionSection>
+                    </div>
 
+                    {/* Center: score ring */}
+                    <MiniRing score={report.match_score} />
+
+                    {/* Right: confidence + close */}
+                    <div className="flex items-center gap-3 shrink-0">
+                        <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold border
+              ${report.confidence === 'HIGH' ? 'bg-white/20 text-white border-white/40' :
+                                report.confidence === 'MEDIUM' ? 'bg-amber-100/30 text-amber-100 border-amber-300/40' :
+                                    'bg-red-100/30 text-red-100 border-red-300/40'}`}>
+                            {report.confidence}
+                        </span>
+                        <button
+                            onClick={onClose}
+                            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/25 text-white flex items-center justify-center text-lg transition-colors"
+                        >
+                            ✕
+                        </button>
+                    </div>
                 </div>
 
-                {/* ── 6. STICKY FOOTER ── */}
-                <div className="bg-white border-t border-slate-200 px-6 py-4 flex items-center justify-between shrink-0">
-                    {/* Left — patient ID */}
-                    <span className="font-mono text-xs bg-slate-100 text-slate-500 px-3 py-1.5 rounded-lg border border-slate-200">
-                        {data.patient_id}
-                    </span>
+                {/* ── SCROLLABLE BODY ── */}
+                <div className="flex-1 overflow-y-auto bg-[#F8FFFE] p-5 scrollbar-teal">
 
-                    {/* Center — recommendation */}
-                    <RecommendationPill recommendation={data.recommendation} />
+                    {/* ── SECTION A: Met Criteria / Why You May Qualify ── */}
+                    <Section
+                        borderColor="#0D9488"
+                        title={isPatient ? 'A — Why You May Qualify' : `A — Criteria Met`}
+                        badge={met.length}
+                    >
+                        {met.length === 0
+                            ? <p className="text-slate-400 text-sm py-2">No criteria are currently met.</p>
+                            : met.map((c, i) => <CriteriaRow key={i} c={c} isNurse={isNurse} isPatient={isPatient} />)
+                        }
+                    </Section>
 
-                    {/* Right — actions */}
+                    {/* ── SECTION B: Verify / Items Your Doctor Needs (shown to all) ── */}
+                    <Section
+                        borderColor="#F59E0B"
+                        title={isPatient ? 'B — Items Your Doctor Needs to Confirm' : 'B — Requires Verification'}
+                        badge={verify.length}
+                    >
+                        {verify.length === 0
+                            ? <p className="text-slate-400 text-sm py-2 flex items-center gap-1.5">✅ Nothing requires verification.</p>
+                            : verify.map((c, i) => <CriteriaRow key={i} c={c} isNurse={isNurse} isPatient={isPatient} />)
+                        }
+                        {report.missing_data?.length > 0 && (
+                            <div className="mt-3 bg-orange-50 border border-orange-100 rounded-lg px-4 py-3">
+                                <p className="text-orange-700 text-xs font-bold mb-1.5">
+                                    ⚠️ {isPatient ? 'Additional information needed:' : 'Missing Data:'}
+                                </p>
+                                <ul className="list-disc list-inside space-y-1">
+                                    {report.missing_data.map((d, i) => (
+                                        <li key={i} className="text-orange-600 text-xs">{d}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                    </Section>
+
+                    {/* ── SECTION C: Unmet Criteria (doctor/nurse only) ── */}
+                    {!isPatient && (
+                        <Section borderColor="#EF4444" title="C — Criteria Not Met" badge={unmet.length}>
+                            {unmet.length === 0
+                                ? <p className="text-slate-400 text-sm py-2 flex items-center gap-1.5">✅ No unmet criteria.</p>
+                                : unmet.map((c, i) => <CriteriaRow key={i} c={c} isNurse={isNurse} isPatient={false} />)
+                            }
+                        </Section>
+                    )}
+
+                    {/* ── SECTION D: Exclusion Flags (doctor/nurse only) ── */}
+                    {!isPatient && (
+                        <Section borderColor="#7F1D1D" title="D — Exclusion Flags" badge={excl.length}>
+                            {excl.length === 0
+                                ? <p className="text-slate-400 text-sm py-2 flex items-center gap-1.5">✅ No exclusion flags raised.</p>
+                                : excl.map((flag, i) => (
+                                    <div key={i} className="flex items-center gap-2 bg-red-50 border border-red-100 rounded-lg px-3 py-2.5 mb-2">
+                                        <span className="text-red-500">🚫</span>
+                                        <span className="text-red-700 text-sm">{flag}</span>
+                                    </div>
+                                ))
+                            }
+                        </Section>
+                    )}
+
+                    {/* ── SECTION E: AI Reasoning / What This Means For You ── */}
+                    {(isDoctor || isPatient) && (
+                        <Section
+                            borderColor="#8B5CF6"
+                            title={isPatient ? 'E — What This Means For You' : 'E — AI Reasoning'}
+                        >
+                            {isPatient ? (
+                                <div className="space-y-3">
+                                    <div className="bg-purple-50 border border-purple-100 rounded-xl p-4">
+                                        <p className="text-purple-700 text-sm font-semibold mb-2">In plain terms:</p>
+                                        <p className="text-slate-600 text-sm leading-relaxed">
+                                            {report.narrative_text || 'Your health profile has been analyzed against this trial\'s requirements.'}
+                                        </p>
+                                    </div>
+                                    <RecPill recommendation={report.recommendation} isPatient={true} />
+                                    <p className="text-slate-400 text-xs">
+                                        📋 Please speak with your doctor for more information about this trial.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {/* Narrative */}
+                                    {report.narrative_text && (
+                                        <div className="bg-purple-50 border border-purple-100 rounded-xl p-4">
+                                            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">Narrative Summary</p>
+                                            <p className="text-slate-700 text-sm leading-relaxed italic">{report.narrative_text}</p>
+                                        </div>
+                                    )}
+                                    {/* LLM Explanation */}
+                                    {report.llm_explanation && (
+                                        <blockquote className="border-l-4 border-purple-400 pl-4 py-0.5">
+                                            <p className="text-slate-600 text-sm leading-relaxed italic">{report.llm_explanation}</p>
+                                        </blockquote>
+                                    )}
+                                    <div className="flex items-center gap-2 pt-1">
+                                        <span className="bg-teal-50 text-teal-700 border border-teal-100 text-[10px] font-bold rounded-full px-2.5 py-1">
+                                            🧠 Powered by BioGPT
+                                        </span>
+                                        <span className="text-slate-400 text-[10px]">+ Sentence-Transformers · Confidence: {report.confidence}</span>
+                                    </div>
+                                </div>
+                            )}
+                        </Section>
+                    )}
+                </div>
+
+                {/* ── STICKY FOOTER ── */}
+                <div className="sticky bottom-0 bg-white border-t border-slate-100 rounded-b-2xl px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
+                    {/* Left: patient_id chip */}
                     <div className="flex items-center gap-2">
-                        <button className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-lg transition-colors duration-150">
-                            📥 PDF
+                        <span className="font-mono text-[11px] bg-slate-50 text-slate-500 border border-slate-100 px-2.5 py-1 rounded-lg">
+                            {report.patient_id}
+                        </span>
+                        <RecPill recommendation={report.recommendation} isPatient={isPatient} />
+                    </div>
+
+                    {/* Right: actions */}
+                    <div className="flex items-center gap-2">
+                        {isDoctor && (
+                            <button className="flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full border-2 border-[#0D9488] text-[#0D9488] hover:bg-teal-50 transition-colors">
+                                ⭐ Feedback
+                            </button>
+                        )}
+                        {isDoctor && (
+                            <button className="flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full bg-gradient-to-r from-[#0D9488] to-[#0F766E] text-white shadow-md shadow-teal-200 hover:shadow-lg transition-all">
+                                ⬇️ Download PDF
+                            </button>
+                        )}
+                        <button
+                            onClick={onClose}
+                            className="text-xs font-semibold px-4 py-2 rounded-full border border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700 transition-all"
+                        >
+                            Close
                         </button>
-                        <button
-                            onClick={() => setFeedback('up')}
-                            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-150 text-base ${feedback === 'up' ? 'bg-emerald-100 border border-emerald-300 scale-110' : 'bg-slate-100 hover:bg-slate-200 border border-slate-200'}`}
-                            title="Helpful"
-                        >👍</button>
-                        <button
-                            onClick={() => setFeedback('down')}
-                            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-150 text-base ${feedback === 'down' ? 'bg-red-100 border border-red-300 scale-110' : 'bg-slate-100 hover:bg-slate-200 border border-slate-200'}`}
-                            title="Not helpful"
-                        >👎</button>
                     </div>
                 </div>
             </div>
