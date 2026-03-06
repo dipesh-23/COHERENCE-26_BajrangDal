@@ -450,6 +450,119 @@ def extract_exclusion_entities(text: str, nlp=None) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Logic Tree Builder
+# ---------------------------------------------------------------------------
+
+def build_logic_tree(inclusion_entities: dict, exclusion_entities: dict) -> dict:
+    """
+    Converts parsed inclusion and exclusion entities into a structured Boolean logic JSON.
+    Each condition in inclusion uses AND logic.
+    Each condition in exclusion uses OR logic.
+    """
+    incl_conditions = []
+    
+    # 1. Inclusion Age
+    age = inclusion_entities.get("age_range", {})
+    if age.get("min") is not None or age.get("max") is not None:
+        cond = {"field": "age", "operator": "between"}
+        if age.get("min") is not None:
+            cond["min"] = age["min"]
+        if age.get("max") is not None:
+            cond["max"] = age["max"]
+        incl_conditions.append(cond)
+        
+    # 2. Inclusion Gender
+    gender = inclusion_entities.get("gender")
+    if gender and gender != "any":
+        incl_conditions.append({"field": "gender", "operator": "is", "value": gender})
+        
+    # 3. Inclusion ICD-10
+    icd10 = inclusion_entities.get("icd10_codes", [])
+    if icd10:
+        incl_conditions.append({"field": "diagnosis", "operator": "in", "values": icd10})
+        
+    # 4. Inclusion Labs
+    labs = inclusion_entities.get("lab_values", [])
+    for lab in labs:
+        incl_conditions.append({
+            "field": "lab",
+            "name": lab["lab"],
+            "operator": lab["operator"],
+            "value": lab["value"],
+            "unit": lab["unit"]
+        })
+        
+    # 5. Inclusion Treatments
+    treatments = inclusion_entities.get("prior_treatments", [])
+    for treatment in treatments:
+        incl_conditions.append({
+            "field": "treatment",
+            "operator": "required",
+            "name": treatment
+        })
+        
+    # ---- Exclusions ----
+    excl_conditions = []
+    
+    # 1. Exclusion Drugs
+    forbidden_drugs = exclusion_entities.get("forbidden_drugs", [])
+    for drug in forbidden_drugs:
+        excl_conditions.append({
+            "field": "drug",
+            "operator": "current_use",
+            "name": drug
+        })
+        
+    # 2. Exclusion Conditions
+    forbidden_conds = exclusion_entities.get("forbidden_conditions", [])
+    for cond in forbidden_conds:
+        excl_conditions.append({
+            "field": "condition",
+            "operator": "history",
+            "name": cond
+        })
+        
+    # 3. Pregnancy
+    if exclusion_entities.get("pregnancy_excluded"):
+        excl_conditions.append({
+            "field": "status",
+            "operator": "is",
+            "name": "pregnant",
+            "value": True
+        })
+        
+    # 4. Prior Conditions (Timed)
+    prior_conds = exclusion_entities.get("prior_conditions", [])
+    for pc in prior_conds:
+        excl_conditions.append({
+            "field": "condition",
+            "operator": "history_within_months",
+            "name": pc["condition"],
+            "months": pc["within_months"]
+        })
+        
+    # 5. Other Exclusions
+    others = exclusion_entities.get("other_exclusions", [])
+    for other in others:
+        excl_conditions.append({
+            "field": "other",
+            "operator": "contains",
+            "value": other
+        })
+
+    return {
+        "inclusion": {
+            "logic": "AND",
+            "conditions": incl_conditions
+        },
+        "exclusion": {
+            "logic": "OR",
+            "conditions": excl_conditions
+        }
+    }
+
+
+# ---------------------------------------------------------------------------
 # Smoke-tests (run: conda activate clinical-nlp && python backend/modules/parser.py)
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
@@ -476,7 +589,8 @@ if __name__ == "__main__":
     print("\n" + "=" * 60)
     print("SMOKE-TEST 2: extract_inclusion_entities")
     print("=" * 60)
-    print(json.dumps(extract_inclusion_entities(INCL_SAMPLE, nlp=pipeline), indent=2))
+    incl_res = extract_inclusion_entities(INCL_SAMPLE, nlp=pipeline)
+    print(json.dumps(incl_res, indent=2))
 
     # ── Test 3: exclusion extractor ───────────────────────────────────────────
     EXCL_SAMPLE = (
@@ -488,4 +602,13 @@ if __name__ == "__main__":
     print("\n" + "=" * 60)
     print("SMOKE-TEST 3: extract_exclusion_entities")
     print("=" * 60)
-    print(json.dumps(extract_exclusion_entities(EXCL_SAMPLE, nlp=pipeline), indent=2))
+    excl_res = extract_exclusion_entities(EXCL_SAMPLE, nlp=pipeline)
+    print(json.dumps(excl_res, indent=2))
+
+    # ── Test 4: logic tree builder ────────────────────────────────────────────
+    print("\n" + "=" * 60)
+    print("SMOKE-TEST 4: build_logic_tree")
+    print("=" * 60)
+    logic_tree = build_logic_tree(incl_res, excl_res)
+    print(json.dumps(logic_tree, indent=2))
+
