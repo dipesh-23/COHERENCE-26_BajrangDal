@@ -1,11 +1,15 @@
 """
 Clinical NLP Parser using ScispaCy + MedSpaCy
 
-Installation:
-    pip install scispacy==0.5.5 medspacy
-    pip install https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.5/en_core_sci_lg-0.5.5.tar.gz
+Installation (use the `clinical-nlp` conda environment):
+    conda create -n clinical-nlp python=3.11 -y
+    conda activate clinical-nlp
+    pip install scispacy==0.5.4
+    pip install git+https://github.com/medspacy/medspacy.git
+    pip install https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.4/en_core_sci_lg-0.5.4.tar.gz
 
-Supports Python 3.12+ via scispacy v0.5.5
+NOTE: scispacy v0.5.5 model URL does not exist on S3. v0.5.4 is the latest available model.
+Requires Python 3.11 (spacy 3.7.x is not yet compatible with Python 3.13).
 """
 
 import spacy
