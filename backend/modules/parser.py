@@ -101,32 +101,68 @@ def _extract_age_range(text: str) -> dict:
     for pat in patterns:
         m = re.search(pat, text, re.IGNORECASE)
         if m:
-            return {"min": int(m.group(1)), "max": int(m.group(2))}
+            return {
+                "min": int(m.group(1)), 
+                "max": int(m.group(2)),
+                "source_start": m.start(),
+                "source_end": m.end(),
+                "source_snippet": text[m.start():m.end()]
+            }
 
     # Single bound: "at least 18 years"
     m = re.search(r"at\s+least\s+(\d{1,3})\s+years?", text, re.IGNORECASE)
     if m:
-        return {"min": int(m.group(1)), "max": None}
+        return {
+            "min": int(m.group(1)), 
+            "max": None,
+            "source_start": m.start(),
+            "source_end": m.end(),
+            "source_snippet": text[m.start():m.end()]
+        }
 
     return {"min": None, "max": None}
 
 
-def _extract_gender(text: str) -> str:
+def _extract_gender(text: str) -> dict:
     """
     Detect gender requirement.
-    Returns: "male" | "female" | "any"
+    Returns a dict containing the gender value and traceability info.
     """
     text_lower = text.lower()
-    has_male   = bool(re.search(r"\bmale\b", text_lower))
-    has_female = bool(re.search(r"\bfemale\b", text_lower))
+    
+    # We must find the bounds. Since "male or female" implies "any",
+    # we'll find both bounds if both exist.
+    has_male = False
+    has_female = False
+    start, end = len(text), 0
+    
+    for m in re.finditer(r"\bmale\b", text_lower):
+        has_male = True
+        start = min(start, m.start())
+        end = max(end, m.end())
+        
+    for m in re.finditer(r"\bfemale\b", text_lower):
+        has_female = True
+        start = min(start, m.start())
+        end = max(end, m.end())
 
+    if not has_male and not has_female:
+        return {"value": "any"}
+        
+    val = "any"
     if has_male and has_female:
-        return "any"
+        val = "any"
     elif has_female:
-        return "female"
+        val = "female"
     elif has_male:
-        return "male"
-    return "any"
+        val = "male"
+        
+    return {
+        "value": val,
+        "source_start": start,
+        "source_end": end,
+        "source_snippet": text[start:end]
+    }
 
 
 def _extract_icd10_codes(text: str) -> list:
@@ -134,54 +170,80 @@ def _extract_icd10_codes(text: str) -> list:
     Extract ICD-10 code strings using regex.
     Matches codes like E11.9, I10, Z87.39, A00-Z99 style.
     """
-    # ICD-10 codes: 1 letter + 2 digits, optionally followed by . and 1-4 chars
     pattern = r"\b([A-Z]\d{2}(?:\.\d{1,4})?)\b"
-    codes = re.findall(pattern, text)
-    return list(dict.fromkeys(codes))  # deduplicated, order-preserved
+    results = []
+    seen = set()
+    for m in re.finditer(pattern, text):
+        code = m.group(1)
+        if code not in seen:
+            seen.add(code)
+            results.append({
+                "code": code,
+                "source_start": m.start(),
+                "source_end": m.end(),
+                "source_snippet": text[m.start():m.end()]
+            })
+    return results
 
 
 def _extract_lab_values(text: str) -> list:
     """
-    Extract structured lab measurements.
-    Handles: "HbA1c > 7%", "HbA1c greater than 7%", "eGFR >= 60 mL/min"
+    Extract structured lab measurements with traceability.
     """
     # Map word operators to symbols
     word_ops = {
-        "greater than or equal to": ">=",
-        "less than or equal to":    "<=",
-        "greater than":             ">",
-        "less than":                "<",
-        "equal to":                 "=",
-        "at least":                 ">=",
-        "at most":                  "<=",
-        "more than":                ">",
-        "no more than":             "<=",
+        r"greater than or equal to": ">=",
+        r"less than or equal to":    "<=",
+        r"greater than":             ">",
+        r"less than":                "<",
+        r"equal to":                 "=",
+        r"at least":                 ">=",
+        r"at most":                  "<=",
+        r"more than":                ">",
+        r"no more than":             "<=",
     }
 
-    # Normalise word operators first
-    normalised = text
-    for phrase, sym in word_ops.items():
-        normalised = re.sub(phrase, sym, normalised, flags=re.IGNORECASE)
-
-    # Pattern: LAB_NAME OPERATOR VALUE UNIT?
-    # Lab names: word chars, spaces, digits, slashes (e.g. HbA1c, eGFR, LDL-C)
+    # IMPORTANT: We cannot mutate 'text' directly if we need exact start/end 
+    # character indices. So we track matches on the raw text directly, 
+    # but we'll accept word operators in the primary regex.
+    
+    # Compile a mega-pattern that catches symbols OR word operators
+    op_pattern = r"(>=|<=|>|<|=|greater than or equal to|less than or equal to|greater than|less than|equal to|at least|at most|more than|no more than)"
+    
     pattern = (
-        r"((?:[A-Za-z][\w\-]*)(?:\s+[\w\-]+){0,3})"  # lab name (1–4 tokens)
-        r"\s*(>=|<=|>|<|=)\s*"                         # operator
-        r"([\d]+(?:\.[\d]+)?)"                         # numeric value
+        r"((?:[A-Za-z][\w\-]*)(?:\s+[\w\-]+){0,3})"  # lab name
+        r"\s*" + op_pattern + r"\s*"                  # operator (symbol or words)
+        r"([\d]+(?:\.[\d]+)?)"                        # numeric
         r"\s*(%|mmol/L|mg/dL|mL/min(?:/1\.73\s*m²?)?|U/L|g/dL|IU/L|ng/mL|µg/L|mmHg)?"  # unit
     )
+    
     results = []
-    # Words that indicate a duration/context phrase, not a lab name
     noise_words = re.compile(r"\b(month|week|day|year|for|on|per|at|least|most)\b", re.IGNORECASE)
-    for m in re.finditer(pattern, normalised, re.IGNORECASE):
+    
+    for m in re.finditer(pattern, text, re.IGNORECASE):
         lab  = m.group(1).strip()
-        op   = m.group(2)
+        raw_op = m.group(2).lower()
         val  = float(m.group(3))
         unit = m.group(4) or ""
-        # Filter out noise (pure numbers, very short tokens, or duration phrases)
+        
+        # Transform word operators back to symbols for JSON
+        op = raw_op
+        for phrase, sym in word_ops.items():
+            if phrase in raw_op:
+                op = sym
+                break
+        
+        # Filter noise
         if len(lab) >= 3 and not lab[0].isdigit() and not noise_words.search(lab):
-            results.append({"lab": lab, "operator": op, "value": val, "unit": unit})
+            results.append({
+                "lab": lab, 
+                "operator": op, 
+                "value": val, 
+                "unit": unit,
+                "source_start": m.start(),
+                "source_end": m.end(),
+                "source_snippet": text[m.start():m.end()]
+            })
     return results
 
 
@@ -191,6 +253,7 @@ def _extract_prior_treatments(text: str, nlp=None) -> list:
     Falls back to a simple regex keyword list if nlp is not provided.
     """
     treatments = []
+    seen = set()
 
     if nlp is not None:
         doc = nlp(text)
@@ -202,7 +265,15 @@ def _extract_prior_treatments(text: str, nlp=None) -> list:
         )
         for ent in doc.ents:
             if treatment_keywords.search(ent.text):
-                treatments.append(ent.text.strip())
+                t = ent.text.strip()
+                if t.lower() not in seen:
+                    seen.add(t.lower())
+                    treatments.append({
+                        "name": t,
+                        "source_start": ent.start_char,
+                        "source_end": ent.end_char,
+                        "source_snippet": text[ent.start_char:ent.end_char]
+                    })
     
     # Regex fallback / supplement for common drug mentions
     drug_pattern = re.compile(
@@ -213,10 +284,16 @@ def _extract_prior_treatments(text: str, nlp=None) -> list:
     )
     for m in drug_pattern.finditer(text):
         drug = m.group(1).strip()
-        if drug not in treatments:
-            treatments.append(drug)
+        if drug.lower() not in seen:
+            seen.add(drug.lower())
+            treatments.append({
+                "name": drug,
+                "source_start": m.start(),
+                "source_end": m.end(),
+                "source_snippet": text[m.start():m.end()]
+            })
 
-    return list(dict.fromkeys(treatments))  # deduplicated
+    return treatments
 
 
 def extract_inclusion_entities(text: str, nlp=None) -> dict:
@@ -299,20 +376,34 @@ _TIME_NOISE = re.compile(
 def _extract_forbidden_drugs(text: str, nlp=None) -> list:
     """Extract drug names mentioned as exclusions using regex + NER."""
     drugs = []
+    seen = set()
 
     # Regex sweep
     for m in _DRUG_RE.finditer(text):
         d = m.group(1).strip()
-        if d.lower() not in [x.lower() for x in drugs]:
-            drugs.append(d)
+        if d.lower() not in seen:
+            seen.add(d.lower())
+            drugs.append({
+                "name": d,
+                "source_start": m.start(),
+                "source_end": m.end(),
+                "source_snippet": text[m.start():m.end()]
+            })
 
     # ScispaCy NER supplement
     if nlp is not None:
         doc = nlp(text)
         for ent in doc.ents:
             if _DRUG_RE.search(ent.text):
-                if ent.text.strip().lower() not in [x.lower() for x in drugs]:
-                    drugs.append(ent.text.strip())
+                d = ent.text.strip()
+                if d.lower() not in seen:
+                    seen.add(d.lower())
+                    drugs.append({
+                        "name": d,
+                        "source_start": ent.start_char,
+                        "source_end": ent.end_char,
+                        "source_snippet": text[ent.start_char:ent.end_char]
+                    })
 
     return drugs
 
@@ -323,6 +414,7 @@ def _extract_forbidden_conditions(text: str, nlp=None) -> list:
     Falls back to clause-level heuristics when nlp is absent.
     """
     conditions = []
+    seen = set()
 
     if nlp is not None:
         doc = nlp(text)
@@ -332,31 +424,52 @@ def _extract_forbidden_conditions(text: str, nlp=None) -> list:
                 continue
             if re.match(r"^\d", ent.text.strip()):
                 continue
-            cleaned = _NOISE.sub("", ent.text).strip(" ,.")
-            if len(cleaned) >= 4 and cleaned.lower() not in [c.lower() for c in conditions]:
-                conditions.append(cleaned)
+            
+            # Since _NOISE strips characters, we want to maintain accurate source bounds
+            # So we grab the bounds exactly as NER saw them first.
+            raw_text = ent.text
+            start = ent.start_char
+            end = ent.end_char
+            
+            cleaned = _NOISE.sub("", raw_text).strip(" ,.")
+            if len(cleaned) >= 4 and cleaned.lower() not in seen:
+                seen.add(cleaned.lower())
+                conditions.append({
+                    "name": cleaned,
+                    "source_start": start,
+                    "source_end": end,
+                    "source_snippet": text[start:end]
+                })
 
     return conditions
 
 
-def _extract_pregnancy_flag(text: str) -> bool:
-    """Return True if pregnancy / breastfeeding is mentioned as an exclusion."""
-    return bool(_PREGNANCY_RE.search(text))
+def _extract_pregnancy_flag(text: str) -> dict:
+    """Return dict if pregnancy / breastfeeding is mentioned as an exclusion."""
+    m = _PREGNANCY_RE.search(text)
+    if m:
+        return {
+            "value": True,
+            "source_start": m.start(),
+            "source_end": m.end(),
+            "source_snippet": text[m.start():m.end()]
+        }
+    return {"value": False}
 
 
 def _extract_prior_conditions(text: str) -> list:
     """
     Extract timed prior-condition clauses like
     'myocardial infarction within the last 12 months'.
-    Returns list of {"condition": str, "within_months": int}.
+    Returns list of condition dicts with exact character indices.
     """
     results = []
     for m in _TEMPORAL_RE.finditer(text):
-        condition   = m.group(1).strip(" ,.")
+        raw_cond = m.group(1).strip(" ,.")
         # Clean noise words from condition string
-        condition   = _NOISE.sub("", condition).strip(" ,.")
-        raw_n       = int(m.group(2))
-        unit        = m.group(3).lower()
+        condition = _NOISE.sub("", raw_cond).strip(" ,.")
+        raw_n = int(m.group(2))
+        unit = m.group(3).lower()
 
         # Normalise all to months
         if unit.startswith("week"):
@@ -367,7 +480,13 @@ def _extract_prior_conditions(text: str) -> list:
             months = raw_n
 
         if len(condition) >= 4:
-            results.append({"condition": condition, "within_months": months})
+            results.append({
+                "condition": condition, 
+                "within_months": months,
+                "source_start": m.start(),
+                "source_end": m.end(),
+                "source_snippet": text[m.start():m.end()]
+            })
 
     return results
 
@@ -382,9 +501,9 @@ def _extract_other_exclusions(text: str,
     """
     already_covered = set()
     for d in forbidden_drugs:
-        already_covered.add(d.lower())
+        already_covered.add(d["name"].lower())
     for c in forbidden_conditions:
-        already_covered.add(c.lower())
+        already_covered.add(c["name"].lower())
     for p in prior_conditions:
         already_covered.add(p["condition"].lower())
 
@@ -464,7 +583,13 @@ def build_logic_tree(inclusion_entities: dict, exclusion_entities: dict) -> dict
     # 1. Inclusion Age
     age = inclusion_entities.get("age_range", {})
     if age.get("min") is not None or age.get("max") is not None:
-        cond = {"field": "age", "operator": "between"}
+        cond = {
+            "field": "age", 
+            "operator": "between",
+            "source_start": age.get("source_start", 0),
+            "source_end": age.get("source_end", 0),
+            "source_snippet": age.get("source_snippet", "")
+        }
         if age.get("min") is not None:
             cond["min"] = age["min"]
         if age.get("max") is not None:
@@ -472,14 +597,29 @@ def build_logic_tree(inclusion_entities: dict, exclusion_entities: dict) -> dict
         incl_conditions.append(cond)
         
     # 2. Inclusion Gender
-    gender = inclusion_entities.get("gender")
-    if gender and gender != "any":
-        incl_conditions.append({"field": "gender", "operator": "is", "value": gender})
+    gender = inclusion_entities.get("gender", {})
+    val = gender.get("value")
+    if val and val != "any":
+        incl_conditions.append({
+            "field": "gender", 
+            "operator": "is", 
+            "value": val,
+            "source_start": gender.get("source_start", 0),
+            "source_end": gender.get("source_end", 0),
+            "source_snippet": gender.get("source_snippet", "")
+        })
         
     # 3. Inclusion ICD-10
-    icd10 = inclusion_entities.get("icd10_codes", [])
-    if icd10:
-        incl_conditions.append({"field": "diagnosis", "operator": "in", "values": icd10})
+    icd10_list = inclusion_entities.get("icd10_codes", [])
+    for icd in icd10_list:
+        incl_conditions.append({
+            "field": "diagnosis", 
+            "operator": "in", 
+            "values": [icd["code"]],
+            "source_start": icd["source_start"],
+            "source_end": icd["source_end"],
+            "source_snippet": icd["source_snippet"]
+        })
         
     # 4. Inclusion Labs
     labs = inclusion_entities.get("lab_values", [])
@@ -489,7 +629,10 @@ def build_logic_tree(inclusion_entities: dict, exclusion_entities: dict) -> dict
             "name": lab["lab"],
             "operator": lab["operator"],
             "value": lab["value"],
-            "unit": lab["unit"]
+            "unit": lab["unit"],
+            "source_start": lab["source_start"],
+            "source_end": lab["source_end"],
+            "source_snippet": lab["source_snippet"]
         })
         
     # 5. Inclusion Treatments
@@ -498,7 +641,10 @@ def build_logic_tree(inclusion_entities: dict, exclusion_entities: dict) -> dict
         incl_conditions.append({
             "field": "treatment",
             "operator": "required",
-            "name": treatment
+            "name": treatment["name"],
+            "source_start": treatment["source_start"],
+            "source_end": treatment["source_end"],
+            "source_snippet": treatment["source_snippet"]
         })
         
     # ---- Exclusions ----
@@ -510,7 +656,10 @@ def build_logic_tree(inclusion_entities: dict, exclusion_entities: dict) -> dict
         excl_conditions.append({
             "field": "drug",
             "operator": "current_use",
-            "name": drug
+            "name": drug["name"],
+            "source_start": drug["source_start"],
+            "source_end": drug["source_end"],
+            "source_snippet": drug["source_snippet"]
         })
         
     # 2. Exclusion Conditions
@@ -519,16 +668,23 @@ def build_logic_tree(inclusion_entities: dict, exclusion_entities: dict) -> dict
         excl_conditions.append({
             "field": "condition",
             "operator": "history",
-            "name": cond
+            "name": cond["name"],
+            "source_start": cond["source_start"],
+            "source_end": cond["source_end"],
+            "source_snippet": cond["source_snippet"]
         })
         
     # 3. Pregnancy
-    if exclusion_entities.get("pregnancy_excluded"):
+    preg = exclusion_entities.get("pregnancy_excluded", {})
+    if preg.get("value"):
         excl_conditions.append({
             "field": "status",
             "operator": "is",
             "name": "pregnant",
-            "value": True
+            "value": True,
+            "source_start": preg.get("source_start", 0),
+            "source_end": preg.get("source_end", 0),
+            "source_snippet": preg.get("source_snippet", "")
         })
         
     # 4. Prior Conditions (Timed)
@@ -538,16 +694,24 @@ def build_logic_tree(inclusion_entities: dict, exclusion_entities: dict) -> dict
             "field": "condition",
             "operator": "history_within_months",
             "name": pc["condition"],
-            "months": pc["within_months"]
+            "months": pc["within_months"],
+            "source_start": pc["source_start"],
+            "source_end": pc["source_end"],
+            "source_snippet": pc["source_snippet"]
         })
         
     # 5. Other Exclusions
+    # Note: Other exclusions are free-text splits so they don't have exact token match boundaries.
+    # For the hackathon, we supply a graceful 0 for these.
     others = exclusion_entities.get("other_exclusions", [])
     for other in others:
         excl_conditions.append({
             "field": "other",
             "operator": "contains",
-            "value": other
+            "value": other,
+            "source_start": 0,
+            "source_end": 0,
+            "source_snippet": other
         })
 
     return {
