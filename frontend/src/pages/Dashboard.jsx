@@ -172,52 +172,29 @@ export default function Dashboard({
             <main className="flex flex-1 h-[calc(100vh-64px)] overflow-hidden">
 
                 {/* ── LEFT COLUMN ── */}
-                <aside className="w-80 shrink-0 flex flex-col overflow-y-auto bg-slate-900 border-r border-slate-700 p-4 gap-4 scrollbar-thin scrollbar-thumb-slate-700">
-                    <h2 className="text-white font-bold text-base flex items-center gap-2"><span>⚙️</span> Patient & Filters</h2>
+                <aside className="w-80 shrink-0 flex flex-col overflow-y-auto bg-[#F8FFFE] border-r border-teal-100 p-4 gap-4">
+                    <h2 className="text-[#0F766E] font-bold text-base flex items-center gap-2"><span>⚙️</span> Patient & Filters</h2>
 
-                    {/* PatientUploader — calls POST /ingest/patient internally via useTrialEngine */}
                     <PatientUploader
                         onPatientLoaded={handlePatientLoaded}
-                        isDemoMode={isDemoMode}
+                        userRole={currentUser?.role || 'doctor'}
                     />
 
-                    {/* Patient summary strip — rendered once AnonymizedPatient is returned */}
-                    {patientData && (
-                        <div className="bg-slate-800 rounded-xl p-3 border border-slate-700 anim-fade-up">
-                            <p className="font-mono text-xs text-blue-400 mb-2">{patientData.patient_id}</p>
-                            <div className="flex flex-wrap gap-1.5 mb-3">
-                                <span className="bg-blue-500/15 text-blue-400 border border-blue-500/25 rounded-full px-2 py-0.5 text-xs font-semibold">{patientData.age} yrs</span>
-                                <span className="bg-purple-500/15 text-purple-400 border border-purple-500/25 rounded-full px-2 py-0.5 text-xs font-semibold">{patientData.gender}</span>
-                                <span className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 rounded-full px-2 py-0.5 text-xs font-semibold">{patientData.diagnoses?.length || 0} Dx</span>
-                                <span className="bg-amber-500/15 text-amber-400 border border-amber-500/25 rounded-full px-2 py-0.5 text-xs font-semibold">{patientData.medications?.length || 0} Meds</span>
-                            </div>
-                            {patientData.labs && (
-                                <div className="flex justify-between bg-slate-900/60 rounded-lg px-3 py-2 border border-slate-700/50">
-                                    {Object.entries(patientData.labs).map(([k, v]) => (
-                                        <div key={k} className="flex flex-col items-center">
-                                            <span className={`text-sm font-bold tabular-nums ${labColor(k, v)}`}>{v}{k === 'HbA1c' ? '%' : ''}</span>
-                                            <span className="text-[10px] text-slate-500 mt-0.5">{k}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
 
                     {/* GeographyFilter — produces {zip, radius_miles, hpsa_only} for POST /match */}
                     <GeographyFilter onFilterChange={handleFilterChange} />
 
                     {/* Ethics Monitor */}
-                    <div className="mt-auto bg-slate-800 rounded-2xl p-4 border border-slate-700">
-                        <h3 className="text-white font-semibold text-sm flex items-center gap-2 mb-3"><span>🛡️</span> Ethics Monitor</h3>
+                    <div className="mt-auto bg-white rounded-2xl p-4 border border-teal-50 shadow-sm">
+                        <h3 className="text-[#0F766E] font-semibold text-sm flex items-center gap-2 mb-3"><span>🛡️</span> Ethics Monitor</h3>
                         {[
                             { label: 'Geographic Equity', status: 'ok' },
                             { label: 'Demographic Parity', status: 'ok' },
                             { label: 'Data Completeness', status: verifications > 2 ? 'warn' : 'ok' },
                         ].map(row => (
                             <div key={row.label} className="flex items-center justify-between text-sm py-1.5">
-                                <span className="text-slate-300">{row.label}</span>
-                                <div className={`w-2 h-2 rounded-full shadow-sm ${row.status === 'warn' ? 'bg-amber-500 shadow-amber-500/50 anim-pulse' : 'bg-emerald-500 shadow-emerald-500/30'}`} />
+                                <span className="text-slate-600">{row.label}</span>
+                                <div className={`w-2 h-2 rounded-full shadow-sm ${row.status === 'warn' ? 'bg-amber-400 shadow-amber-400/50 anim-pulse' : 'bg-teal-500 shadow-teal-500/30'}`} />
                             </div>
                         ))}
                     </div>
