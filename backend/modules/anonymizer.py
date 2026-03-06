@@ -24,6 +24,7 @@ from __future__ import annotations
 import copy
 import re
 import sys
+from pathlib import Path
 from typing import Any
 
 # ── Presidio import guard ──────────────────────────────────────────────────────
@@ -224,6 +225,57 @@ def anonymize_patient(patient: dict[str, Any]) -> dict[str, Any]:
     anonymised_patient = copy.deepcopy(patient)
     anonymised_patient["history_text"] = final_text
     return anonymised_patient
+
+
+def parse_trial_pdf(file_path: str) -> dict[str, str]:
+    """
+    Extract text content from a PDF file using pdfplumber.
+
+    Parameters
+    ----------
+    file_path : str
+        Path to the clinical trial PDF document.
+
+    Returns
+    -------
+    dict
+        A dictionary containing:
+        - 'title': A fallback title using the file name.
+        - 'criteria_text': The complete extracted text from all pages.
+        If the file cannot be opened or parsed, returns empty strings for both.
+    """
+    import logging
+    
+    try:
+        import pdfplumber
+    except ImportError:
+        logging.error("pdfplumber is not installed. Run: pip install pdfplumber")
+        return {"title": "", "criteria_text": ""}
+
+    extracted_text = []
+    try:
+        with pdfplumber.open(file_path) as pdf:
+            for page in pdf.pages:
+                text = page.extract_text()
+                if text:
+                    extracted_text.append(text)
+    except FileNotFoundError:
+        logging.error(f"PDF file not found at: {file_path}")
+        return {"title": "", "criteria_text": ""}
+    except Exception as e:
+        logging.error(f"Error parsing PDF {file_path}: {e}")
+        return {"title": "", "criteria_text": ""}
+
+    full_text = "\n\n".join(extracted_text).strip()
+    
+    # Extracting a real title from pure text is unreliable, so we use the 
+    # filename as a sensible default fallback.
+    fallback_title = Path(file_path).stem.replace("_", " ").title() if full_text else ""
+
+    return {
+        "title": fallback_title,
+        "criteria_text": full_text
+    }
 
 
 # ── CLI convenience ────────────────────────────────────────────────────────────
