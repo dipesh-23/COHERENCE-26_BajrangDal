@@ -190,6 +190,87 @@ const DEMO_RESULTS = [
     }
 ];
 
+const DEMO_REPORTS = {
+    "NCT-2026-EMBARK-001": {
+        patient_id: "P-84921",
+        trial_id: "NCT-2026-EMBARK-001",
+        trial_name: "EMBARK-T2DM Phase III",
+        match_score: 92,
+        confidence: "HIGH",
+        phase: "Phase III",
+        sponsor: "NovaBiomed Inc.",
+        location: "Mount Sinai Hospital, New York, NY",
+        distance_string: "4 miles away",
+        hpsa_flagged: false,
+        criteria_breakdown: [
+            { name: "Age 45–70", status: "met", detail: "Patient age 62 within required range 45–70." },
+            { name: "T2DM Diagnosis (ICD E11.9)", status: "met", detail: "Confirmed Type 2 Diabetes Mellitus on record." },
+            { name: "HbA1c ≥ 7.5%", status: "met", detail: "HbA1c 8.4% exceeds the 7.5% minimum threshold." },
+            { name: "Active Metformin Use", status: "met", detail: "Metformin 1000mg is an active medication." },
+            { name: "eGFR ≥ 45 mL/min", status: "verify", detail: "eGFR 48 mL/min marginally above threshold of 45. Lab confirmation within 30 days required." },
+            { name: "No Prior GLP-1 Agonist Use", status: "met", detail: "No GLP-1 agonist found in medication history." }
+        ],
+        missing_data: ["eGFR lab confirmation within 30 days"],
+        exclusion_flags: [],
+        narrative_text: "Patient P-84921 is a strong candidate for EMBARK-T2DM Phase III.",
+        recommendation: "Proceed",
+        llm_explanation: "This 62-year-old female with poorly controlled Type 2 Diabetes (HbA1c 8.4%) and active Metformin therapy aligns precisely with the EMBARK-T2DM primary inclusion profile. Her age of 62 sits comfortably within the 45–70 window, and the absence of prior GLP-1 agonist use makes her an ideal candidate for this investigational agent. The single item requiring verification is her eGFR value of 48 mL/min — while this exceeds the trial threshold of 45, the protocol requires a confirmed lab result dated within 30 days of enrollment. A GP-requested lab confirmation would resolve this and elevate confidence to maximum. Overall clinical profile: STRONG MATCH. Recommend proceeding to enrollment inquiry with renal lab verification."
+    },
+    "NCT-2026-RENAL-002": {
+        patient_id: "P-84921",
+        trial_id: "NCT-2026-RENAL-002",
+        trial_name: "Renal-Protect Urban Outcomes",
+        match_score: 78,
+        confidence: "MEDIUM",
+        phase: "Phase II",
+        sponsor: "Urban Health Consortium",
+        location: "Harlem Hospital Center, New York, NY",
+        distance_string: "1.2 miles away",
+        hpsa_flagged: true,
+        criteria_breakdown: [
+            { name: "Stage 3 CKD (eGFR 30–59)", status: "met", detail: "eGFR 48 places patient in Stage 3a CKD, matching criterion exactly." },
+            { name: "Hypertension Diagnosis", status: "met", detail: "Essential Hypertension (ICD I10) confirmed." },
+            { name: "ACE Inhibitor or ARB Use", status: "met", detail: "Lisinopril 10mg (ACE inhibitor) is active." },
+            { name: "Urban HPSA Resident", status: "met", detail: "ZIP 10029 (East Harlem) is a federally designated HPSA." },
+            { name: "No Active Malignancy", status: "verify", detail: "No cancer history recorded but formal oncology clearance not documented." },
+            { name: "Proteinuria Confirmed (UACR)", status: "verify", detail: "Urine albumin-to-creatinine ratio not present in current record." }
+        ],
+        missing_data: ["Oncology clearance documentation", "Urine albumin-to-creatinine ratio (UACR)"],
+        exclusion_flags: [],
+        narrative_text: "Strong alignment with urban CKD outcomes trial pending two verification items.",
+        recommendation: "Verify First",
+        llm_explanation: "The Renal-Protect Urban Outcomes trial was specifically designed for patients matching this profile — urban-dwelling individuals with Stage 3 CKD, hypertension, and active renin-angiotensin system blockade. Patient P-84921 satisfies all four primary inclusion criteria. The HPSA designation of her East Harlem ZIP code (10029) triggers an equity-based priority weighting in our scoring model, reflecting the trial's focus on underserved urban populations. Two items remain unverified: a urine albumin-to-creatinine ratio (UACR) which is standard pre-enrollment renal workup, and a formal oncology clearance statement. Both are routine documentation requests. If verified, this trial could be elevated to HIGH confidence. The geographic proximity of 1.2 miles to Harlem Hospital Center further strengthens the case for patient engagement."
+    },
+    "NCT-2026-GLP1-003": {
+        patient_id: "P-84921",
+        trial_id: "NCT-2026-GLP1-003",
+        trial_name: "GLP-1 Aggressive Titration Study",
+        match_score: 42,
+        confidence: "HIGH",
+        phase: "Phase II",
+        sponsor: "EndoTherapeutics Corp.",
+        location: "NYU Langone Medical Center, New York, NY",
+        distance_string: "5.8 miles away",
+        hpsa_flagged: false,
+        criteria_breakdown: [
+            { name: "Age 40–75", status: "met", detail: "Patient age 62 within acceptable range." },
+            { name: "T2DM Diagnosis", status: "met", detail: "Type 2 Diabetes Mellitus confirmed." },
+            { name: "HbA1c ≥ 8.0%", status: "met", detail: "HbA1c 8.4% meets the minimum threshold." },
+            { name: "eGFR ≥ 60 mL/min (Safety Threshold)", status: "unmet", detail: "eGFR 48 mL/min is BELOW the mandatory safety threshold of 60 mL/min. Hard exclusion — nephrotoxicity risk." },
+            { name: "No Metformin Contraindication", status: "met", detail: "Patient tolerating Metformin without documented contraindication." },
+            { name: "No Prior GLP-1 Exposure", status: "met", detail: "No GLP-1 agonist in medication history." }
+        ],
+        missing_data: [],
+        exclusion_flags: [
+            "eGFR 48 mL/min is below mandatory safety threshold of 60 mL/min — nephrotoxicity risk at aggressive GLP-1 titration doses",
+            "Stage 3a CKD diagnosis conflicts with protocol renal clearance requirements"
+        ],
+        narrative_text: "Patient excluded due to renal safety threshold violation despite meeting glycemic criteria.",
+        recommendation: "Not Suitable",
+        llm_explanation: "Patient P-84921 meets the glycemic and demographic criteria for the GLP-1 Aggressive Titration Study — her HbA1c of 8.4% and T2DM diagnosis are directly on target. However, the trial protocol contains a hard safety exclusion for patients with eGFR below 60 mL/min due to the nephrotoxicity risk associated with aggressive GLP-1 titration in renally impaired patients. With an eGFR of 48 mL/min, this patient falls into Stage 3a CKD and cannot safely participate under current protocol. This exclusion is binary and cannot be overridden by verification or additional documentation. The rule-based engine flagged this immediately. Recommendation: NOT SUITABLE. However, the EMBARK-T2DM trial represents a far safer and equally appropriate alternative for this patient's glycemic management needs."
+    }
+};
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function authHeaders(token) {
     return {
@@ -310,6 +391,19 @@ export function useTrialEngine(token = null) {
     const getReport = useCallback(async (patient_id, trial_id) => {
         setLoading('report', 'Generating transparency report…');
         try {
+            // Serve demo data instantly if in demo mode
+            if (isDemoMode) {
+                await new Promise(resolve => setTimeout(resolve, 800)); // realistic delay
+                const demoReport = DEMO_REPORTS[trial_id];
+                if (demoReport) {
+                    setReportData(demoReport);
+                } else {
+                    setError('report', 'Report not found for this trial in demo mode.');
+                }
+                clearLoading('report');
+                return;
+            }
+
             const res = await fetch(
                 `${API_BASE}/report/${encodeURIComponent(patient_id)}/${encodeURIComponent(trial_id)}`,
                 { headers: authHeaders(token) }
@@ -325,7 +419,7 @@ export function useTrialEngine(token = null) {
         } finally {
             clearLoading('report');
         }
-    }, [token, setError, setLoading, clearLoading]);
+    }, [token, isDemoMode, setError, setLoading, clearLoading]);
 
     // ══════════════════════════════════════════════════════════════════════════
     // verifyField(patient_id, field) → POST /verify/{patient_id}/{field}
