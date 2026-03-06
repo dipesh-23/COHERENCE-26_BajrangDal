@@ -1,218 +1,240 @@
 import React, { useState, useEffect } from 'react';
-// recharts will be available after `npm install recharts`
-// The component gracefully falls back to an SVG arc if recharts is not installed yet.
-let RadialBarChart, RadialBar, Tooltip, ResponsiveContainer;
-try {
-    const recharts = require('recharts');
-    RadialBarChart = recharts.RadialBarChart;
-    RadialBar = recharts.RadialBar;
-    Tooltip = recharts.Tooltip;
-    ResponsiveContainer = recharts.ResponsiveContainer;
-} catch (e) {
-    // recharts not installed yet — fallback SVG is used below
-}
+import {
+    RadialBarChart,
+    RadialBar,
+    Tooltip,
+    ResponsiveContainer,
+} from 'recharts';
 
-// ─── Score Tier Helper ────────────────────────────────────────────────────────
+// ─── Score tier helper ─────────────────────────────────────────────────────────
 function getTier(score) {
-    if (score >= 75) return { color: '#10B981', label: 'Strong Match', glow: '0 0 18px #10B981' };
-    if (score >= 50) return { color: '#F59E0B', label: 'Partial Match', glow: '0 0 18px #F59E0B' };
-    return { color: '#EF4444', label: 'Weak Match', glow: '0 0 18px #EF4444' };
+    if (score >= 75) return { color: '#0D9488', label: 'Strong Match', glow: '0 0 14px #0D9488aa', badgeCls: 'bg-teal-50 text-teal-700 border-teal-200' };
+    if (score >= 50) return { color: '#F59E0B', label: 'Partial Match', glow: '0 0 14px #F59E0Baa', badgeCls: 'bg-amber-50 text-amber-700 border-amber-200' };
+    return { color: '#EF4444', label: 'Weak Match', glow: '0 0 14px #EF4444aa', badgeCls: 'bg-red-50 text-red-700 border-red-200' };
 }
 
-// ─── Custom Recharts Tooltip ──────────────────────────────────────────────────
-function CustomTooltip({ active, payload }) {
-    if (!active || !payload || !payload.length) return null;
-    const d = payload[0].payload;
+// ─── NULL SKELETON ─────────────────────────────────────────────────────────────
+function Skeleton() {
     return (
-        <div className="bg-slate-900 text-white text-xs font-semibold rounded-full px-3 py-1.5 shadow-xl pointer-events-none whitespace-nowrap border border-white/10">
-            {d.name}: <span style={{ color: d.fill }}>{d.value}%</span>
+        <div className="bg-white rounded-2xl shadow-sm border border-teal-50 p-5 animate-pulse">
+            <div className="h-4 bg-slate-100 rounded-full w-1/2 mb-4" />
+            <div className="flex items-center justify-center">
+                <div className="w-[180px] h-[180px] rounded-full bg-slate-100" />
+            </div>
+            <div className="space-y-3 mt-4">
+                {[80, 65, 75, 55].map((w, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                        <div className="w-2.5 h-2.5 rounded-full bg-slate-100 shrink-0" />
+                        <div className="flex-1 h-2 bg-slate-100 rounded-full" style={{ width: `${w}%` }} />
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }
 
-// ─── Fallback SVG arc (when recharts is absent) ───────────────────────────────
-function FallbackArc({ score, tierColor }) {
-    const [animated, setAnimated] = useState(0);
-    useEffect(() => {
-        const duration = 1000;
-        const steps = 60;
-        let step = 0;
-        const t = setInterval(() => {
-            step++;
-            setAnimated(Math.round((1 - Math.pow(1 - step / steps, 3)) * score));
-            if (step >= steps) { clearInterval(t); setAnimated(score); }
-        }, duration / steps);
-        return () => clearInterval(t);
-    }, [score]);
-
-    const r = 80;
-    const circ = 2 * Math.PI * r;
-    const offset = circ - (circ * animated) / 100;
-
+// ─── Custom radial tooltip ─────────────────────────────────────────────────────
+function CustomTooltip({ active, payload }) {
+    if (!active || !payload?.length) return null;
+    const d = payload[0]?.payload;
     return (
-        <svg className="w-full h-full" viewBox="0 0 200 200">
-            <circle cx="100" cy="100" r={r} fill="none" stroke="#E2E8F0" strokeWidth="16" strokeDasharray={circ} strokeDashoffset={circ * 0.25} strokeLinecap="round" transform="rotate(135 100 100)" />
-            <circle cx="100" cy="100" r={r} fill="none" stroke={tierColor} strokeWidth="16" strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" transform="rotate(135 100 100)" style={{ transition: 'stroke-dashoffset 0.3s ease-out' }} />
-        </svg>
+        <div className="bg-[#0F766E] text-white text-xs px-3 py-1.5 rounded-lg shadow-lg pointer-events-none">
+            <span className="font-semibold">{d?.category}</span>: {d?.value}%
+        </div>
     );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
-export default function ScoreGauge({
-    // These values will be replaced with real backend data once merged
-    score = 87,
-    label = 'Overall Match',
-    breakdown = [
-        { category: 'Demographics', value: 91, color: '#3B82F6' },
-        { category: 'Lab Values', value: 78, color: '#10B981' },
-        { category: 'Diagnosis', value: 88, color: '#8B5CF6' },
-        { category: 'Medications', value: 65, color: '#F59E0B' },
-    ],
-}) {
-    const tier = getTier(score);
-
-    // Animated mini-bar widths for legend
-    const [barWidths, setBarWidths] = useState(breakdown.map(() => 0));
+// ─── Legend bar (animated width 0 → value%) ────────────────────────────────────
+function LegendBar({ color, value, category, showValue }) {
+    const [width, setWidth] = useState(0);
     useEffect(() => {
-        const t = setTimeout(() => {
-            setBarWidths(breakdown.map(b => b.value));
-        }, 100);
+        const t = setTimeout(() => setWidth(value), 150);
         return () => clearTimeout(t);
-    }, [breakdown]);
-
-    // Animated score counter
-    const [displayScore, setDisplayScore] = useState(0);
-    useEffect(() => {
-        const duration = 900;
-        const steps = 60;
-        let step = 0;
-        const t = setInterval(() => {
-            step++;
-            setDisplayScore(Math.round((1 - Math.pow(1 - step / steps, 3)) * score));
-            if (step >= steps) { clearInterval(t); setDisplayScore(score); }
-        }, duration / steps);
-        return () => clearInterval(t);
-    }, [score]);
-
-    // Build chart data: total score first (outermost), then breakdown categories
-    const chartData = [
-        { name: label, value: score, fill: tier.color },
-        ...breakdown.map(b => ({ name: b.category, value: b.value, fill: b.color })),
-    ];
-
-    const hasRecharts = !!RadialBarChart;
+    }, [value]);
 
     return (
-        <div className="bg-white rounded-2xl shadow-xl p-5 relative">
-            <style>{`
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(8px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .sg-fade-up { animation: fadeUp 0.4s ease-out forwards; }
-      `}</style>
+        <div className="flex items-center gap-2.5">
+            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-slate-600 text-xs truncate">{category}</span>
+                    {showValue && <span className="text-xs font-bold tabular-nums ml-2" style={{ color }}>{value}%</span>}
+                </div>
+                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                        className="h-full rounded-full transition-all ease-out"
+                        style={{ width: `${width}%`, backgroundColor: color, transitionDuration: '800ms' }}
+                    />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── Patient view: CSS conic-gradient circle ───────────────────────────────────
+function PatientGauge({ score }) {
+    const [pct, setPct] = useState(0);
+    useEffect(() => {
+        let start = null;
+        const dur = 1000;
+        const step = ts => {
+            if (!start) start = ts;
+            const p = Math.min((ts - start) / dur, 1);
+            const ease = 1 - Math.pow(1 - p, 3);
+            setPct(Math.round(ease * score));
+            if (p < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+    }, [score]);
+
+    const tier = getTier(score);
+    const deg = (pct / 100) * 360;
+
+    return (
+        <div className="flex flex-col items-center gap-4">
+            <div className="relative w-[160px] h-[160px] flex items-center justify-center"
+                style={{ filter: `drop-shadow(${tier.glow})` }}>
+                <div className="absolute inset-0 rounded-full"
+                    style={{ background: `conic-gradient(${tier.color} ${deg}deg, #E2E8F0 ${deg}deg)` }} />
+                <div className="absolute inset-[14px] rounded-full bg-white flex flex-col items-center justify-center">
+                    <span className="font-black text-3xl leading-none" style={{ color: tier.color }}>{pct}</span>
+                    <span className="text-slate-400 text-xs mt-0.5">out of 100</span>
+                </div>
+            </div>
+            <span className={`text-xs font-semibold border rounded-full px-3 py-1 ${tier.badgeCls}`}>
+                {tier.label}
+            </span>
+            <p className="text-slate-500 text-xs text-center leading-snug max-w-[200px]">
+                This score reflects how well your health profile matches the trial requirements.
+            </p>
+        </div>
+    );
+}
+
+// ─── Main component ────────────────────────────────────────────────────────────
+export default function ScoreGauge({
+    // All values flow from Dashboard's deriveBreakdown() which transforms live criteria_breakdown
+    score = null,   // null → skeleton
+    label = 'Overall Match',
+    userRole = 'doctor',
+    breakdown = null,   // [{ category, value, color }] | null
+}) {
+    const [infoOpen, setInfoOpen] = useState(false);
+
+    // Null guard
+    if (score === null || score === undefined) return <Skeleton />;
+
+    const tier = getTier(score);
+    const isDoctor = userRole === 'doctor';
+    const isNurse = userRole === 'nurse';
+    const isPatient = userRole === 'patient';
+
+    // Recharts data: must include outermost arc (overall score) first
+    const chartData = breakdown?.length
+        ? [
+            { category: label || 'Overall', value: score, color: isNurse ? '#0F766E' : '#0D9488' },
+            ...breakdown,
+        ]
+        : [{ category: label || 'Overall', value: score, color: isNurse ? '#0F766E' : '#0D9488' }];
+
+    // Recharts needs data sorted largest→smallest for proper inner/outer stacking
+    const sortedData = [...chartData].sort((a, b) => b.value - a.value);
+
+    return (
+        <div className="bg-white rounded-2xl shadow-sm border border-teal-50 p-5">
 
             {/* ── Header ── */}
             <div className="flex items-center justify-between mb-3">
-                <h3 className="text-slate-800 font-bold text-sm tracking-tight flex items-center">
-                    <span className="mr-1.5">📊</span> Match Score Breakdown
+                <h3 className="text-[#0F766E] font-bold text-base flex items-center gap-1.5">
+                    📊 Match Score Breakdown
                 </h3>
-                <div className="relative group">
-                    <span className="text-slate-400 text-base cursor-help select-none">ℹ️</span>
-                    <div className="invisible opacity-0 group-hover:visible group-hover:opacity-100 absolute right-0 top-6 w-64 bg-slate-900 text-white text-[11px] leading-relaxed rounded-xl px-3 py-2 shadow-2xl z-50 transition-all duration-200 pointer-events-none border border-white/10">
-                        Score = hard filter pass/fail + BioGPT semantic match, weighted 0–100.
-                        <div className="absolute top-0 right-2 -translate-y-1.5 w-3 h-3 bg-slate-900 rotate-45 border-l border-t border-white/10"></div>
+                {(isDoctor || isNurse) && (
+                    <div className="relative">
+                        <button
+                            onClick={() => setInfoOpen(o => !o)}
+                            className="text-teal-400 hover:text-teal-600 transition-colors text-sm w-6 h-6 rounded-full flex items-center justify-center hover:bg-teal-50"
+                        >ℹ️</button>
+                        {infoOpen && (
+                            <div className="absolute right-0 top-7 z-50 bg-[#0F766E] text-white text-xs px-3 py-2 rounded-lg shadow-xl w-52 leading-relaxed">
+                                Scores derive from live <strong>criteria_breakdown</strong> returned by{' '}
+                                <code className="bg-white/20 px-1 rounded">POST /match</code>. Higher = better eligibility.
+                                <div className="absolute -top-1.5 right-2 border-[6px] border-transparent border-b-[#0F766E]" />
+                            </div>
+                        )}
                     </div>
-                </div>
-            </div>
-
-            {/* ── Chart + Center Overlay ── */}
-            <div className="relative h-[220px]">
-                {hasRecharts ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                        <RadialBarChart
-                            innerRadius="28%"
-                            outerRadius="95%"
-                            startAngle={225}
-                            endAngle={-45}
-                            data={chartData}
-                            barSize={12}
-                        >
-                            <RadialBar
-                                dataKey="value"
-                                cornerRadius={6}
-                                isAnimationActive={true}
-                                animationDuration={1000}
-                                animationEasing="ease-out"
-                                background={{ fill: '#F1F5F9' }}
-                            />
-                            <Tooltip content={<CustomTooltip />} cursor={false} />
-                        </RadialBarChart>
-                    </ResponsiveContainer>
-                ) : (
-                    // Fallback when recharts not installed
-                    <FallbackArc score={score} tierColor={tier.color} />
                 )}
-
-                {/* ── Center Overlay ── */}
-                <div className="absolute top-[55px] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none sg-fade-up">
-                    <span
-                        className="text-[48px] font-extrabold leading-none tabular-nums"
-                        style={{ color: tier.color, filter: `drop-shadow(${tier.glow})` }}
-                    >
-                        {displayScore}
-                    </span>
-                    <span className="text-slate-400 text-sm font-medium mt-0.5">Score</span>
-                    <span
-                        className="mt-2 text-[11px] font-bold uppercase tracking-wider px-3 py-1 rounded-full border"
-                        style={{
-                            color: tier.color,
-                            borderColor: tier.color + '55',
-                            background: tier.color + '15',
-                        }}
-                    >
-                        {tier.label}
-                    </span>
-                </div>
             </div>
 
-            {/* ── Legend ── */}
-            <div className="space-y-2.5 mt-4">
-                {breakdown.map((item, idx) => (
-                    <div key={item.category} className="flex items-center gap-2.5">
-                        {/* Colored dot */}
-                        <div
-                            className="w-3 h-3 rounded-full shrink-0"
-                            style={{ backgroundColor: item.color }}
-                        />
-                        {/* Category name */}
-                        <span className="text-slate-700 text-sm flex-1 truncate">{item.category}</span>
-                        {/* Animated mini bar */}
-                        <div className="w-24 bg-slate-100 rounded-full h-2 overflow-hidden">
-                            <div
-                                className="h-2 rounded-full transition-all ease-out"
-                                style={{
-                                    width: `${barWidths[idx] || 0}%`,
-                                    backgroundColor: item.color,
-                                    transitionDuration: '800ms',
-                                    transitionDelay: `${idx * 60}ms`,
-                                }}
-                            />
+            {/* ── Patient view ── */}
+            {isPatient && <PatientGauge score={score} />}
+
+            {/* ── Doctor / Nurse view ── */}
+            {!isPatient && (
+                <>
+                    {/* Radial chart container */}
+                    <div className="relative">
+                        <ResponsiveContainer width="100%" height={220}>
+                            <RadialBarChart
+                                innerRadius="25%"
+                                outerRadius="95%"
+                                data={sortedData}
+                                startAngle={90}
+                                endAngle={-270}
+                                barSize={10}
+                            >
+                                {sortedData.map((entry, i) => (
+                                    <RadialBar
+                                        key={i}
+                                        dataKey="value"
+                                        data={[entry]}
+                                        fill={entry.color}
+                                        cornerRadius={5}
+                                        background={{ fill: '#F1F5F9' }}
+                                        isAnimationActive
+                                        animationDuration={1000}
+                                        animationEasing="ease-out"
+                                    />
+                                ))}
+                                <Tooltip content={<CustomTooltip />} />
+                            </RadialBarChart>
+                        </ResponsiveContainer>
+
+                        {/* Center overlay */}
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span
+                                className="font-black text-4xl leading-none tabular-nums"
+                                style={{ color: tier.color, filter: `drop-shadow(${tier.glow})` }}
+                            >
+                                {score}
+                            </span>
+                            <span className="text-slate-400 text-xs mt-0.5">Score</span>
+                            <span className={`mt-2 text-[10px] font-semibold border rounded-full px-2.5 py-0.5 ${tier.badgeCls}`}>
+                                {tier.label}
+                            </span>
                         </div>
-                        {/* Value */}
-                        <span className="text-xs text-slate-500 w-8 text-right font-semibold tabular-nums">
-                            {item.value}
-                        </span>
                     </div>
-                ))}
-            </div>
+
+                    {/* Legend */}
+                    {breakdown?.length > 0 && (
+                        <div className="space-y-2.5 mt-3 pt-3 border-t border-slate-50">
+                            {breakdown.map((b) => (
+                                <LegendBar
+                                    key={b.category}
+                                    color={b.color}
+                                    value={b.value}
+                                    category={b.category}
+                                    showValue={isDoctor}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </>
+            )}
 
             {/* ── Footer ── */}
-            <div className="border-t border-slate-100 pt-3 mt-4 text-center">
-                <span className="text-slate-400 text-[11px]">
-                    🧠 Powered by <span className="font-semibold text-slate-500">BioGPT</span> + Sentence-Transformers
-                </span>
-            </div>
+            <p className="text-teal-400 text-[10px] text-center mt-4 font-medium">
+                🧠 Powered by BioGPT + Sentence-Transformers
+            </p>
         </div>
     );
 }

@@ -393,7 +393,7 @@ export default function Dashboard({
                     {/* ScoreGauge — shown when a trial is selected */}
                     {selectedTrial ? (
                         <div className="anim-fade-up">
-                            <ScoreGauge score={selectedTrial.match_score} breakdown={derivedBreakdown} />
+                            <ScoreGauge score={selectedTrial.match_score} breakdown={derivedBreakdown} userRole={currentUser?.role || 'doctor'} />
                         </div>
                     ) : (
                         <div className="border border-slate-700/40 bg-slate-800/30 rounded-xl p-6 text-center">
