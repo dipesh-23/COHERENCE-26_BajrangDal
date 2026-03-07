@@ -48,6 +48,7 @@ function Section({ borderColor, title, badge, children, defaultOpen = true, titl
             <button
                 onClick={() => setOpen(o => !o)}
                 className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 transition-colors"
+                title={title}
             >
                 <div className="flex flex-1 items-center gap-2">
                     <span className="font-bold text-slate-800 text-sm flex items-center gap-2">
@@ -65,13 +66,9 @@ function Section({ borderColor, title, badge, children, defaultOpen = true, titl
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
             </button>
-            <div style={{
-                maxHeight: open ? '2000px' : '0',
-                overflow: 'hidden',
-                transition: 'max-height 300ms ease-in-out'
-            }}>
-                <div className="px-5 pb-4">{children}</div>
-            </div>
+            {open && (
+                <div className="px-5 pb-4 animate-fade-in">{children}</div>
+            )}
         </div>
     );
 }
@@ -79,9 +76,9 @@ function Section({ borderColor, title, badge, children, defaultOpen = true, titl
 // ─── Criteria row ─────────────────────────────────────────────────────────────
 function CriteriaRow({ c, isNurse, isPatient }) {
     const map = {
-        met: { icon: '✅', bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-100', label: isPatient ? '✅ You meet this requirement' : 'Met' },
+        pass: { icon: '✅', bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-100', label: isPatient ? '✅ You meet this requirement' : 'Met' },
         verify: { icon: '⚠️', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-100', label: isPatient ? '⚠️ Your doctor needs to confirm this' : 'Verify' },
-        unmet: { icon: '❌', bg: 'bg-red-50', text: 'text-red-600', border: 'border-red-100', label: isPatient ? '❌ This requirement is not currently met' : 'Not Met' },
+        fail: { icon: '❌', bg: 'bg-red-50', text: 'text-red-600', border: 'border-red-100', label: isPatient ? '❌ This requirement is not currently met' : 'Not Met' },
     };
     const s = map[c.status] || map.verify;
     return (
@@ -142,9 +139,9 @@ export default function MatchReport({
     const isNurse = userRole === 'nurse';
     const isPatient = userRole === 'patient';
 
-    const met = report.criteria_breakdown?.filter(c => c.status === 'met') || [];
+    const met = report.criteria_breakdown?.filter(c => c.status === 'pass') || [];
     const verify = report.criteria_breakdown?.filter(c => c.status === 'verify') || [];
-    const unmet = report.criteria_breakdown?.filter(c => c.status === 'unmet') || [];
+    const unmet = report.criteria_breakdown?.filter(c => c.status === 'fail') || [];
     const excl = report.exclusion_flags || [];
 
     const tier = getTier(report.match_score);
@@ -189,7 +186,7 @@ export default function MatchReport({
                         </div>
                         {!isPatient && (
                             <div className="text-white/90 text-sm font-medium mb-1 truncate">
-                                {report.trial_name}
+                                {report.title}
                             </div>
                         )}
                         <div className="flex items-center gap-2 flex-wrap">
@@ -431,21 +428,8 @@ export default function MatchReport({
                         </span>
                         <RecPill recommendation={report.recommendation} isPatient={isPatient} />
                     </div>
-
-                    {/* Right: actions */}
+                    {/* Right: buttons */}
                     <div className="flex items-center gap-2">
-                        {!isPatient && (
-                            <div className="flex items-center gap-1 text-xs px-3 text-slate-500">
-                                <span>Was this screening accurate?</span>
-                                <button className="hover:bg-slate-100 rounded p-1 hover:text-green-600 transition-colors">👍</button>
-                                <button className="hover:bg-slate-100 rounded p-1 hover:text-red-600 transition-colors">👎</button>
-                            </div>
-                        )}
-                        {!isPatient && (
-                            <button className="bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 rounded-xl px-3 py-2 text-sm font-medium transition-all flex items-center gap-1.5">
-                                📧 Email PI
-                            </button>
-                        )}
                         {!isPatient && (
                             <button className="flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full bg-gradient-to-r from-[#0D9488] to-[#0F766E] text-white shadow-md shadow-teal-200 hover:shadow-lg transition-all">
                                 📤 Export to Investigator

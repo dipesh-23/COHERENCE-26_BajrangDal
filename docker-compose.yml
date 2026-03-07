@@ -1,0 +1,41 @@
+version: "3.9"
+
+services:
+  # ── Backend — FastAPI ────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ctme_backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env          # contains SUPABASE_URL, SUPABASE_SERVICE_KEY, etc.
+    environment:
+      APP_ENV: "production"
+      ALLOWED_ORIGINS: "http://localhost,http://localhost:80,http://frontend"
+    ports:
+      - "8000:8000"             # expose for direct local testing
+    volumes:
+      - ./backend/data:/app/data        # audit logs
+      - ./backend/models:/app/models    # fine-tuned ML model cache
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s        # give the ML model time to load
+
+  # ── Frontend — React + Nginx ─────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: "http://localhost:8000"   # override in prod if needed
+    container_name: ctme_frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy

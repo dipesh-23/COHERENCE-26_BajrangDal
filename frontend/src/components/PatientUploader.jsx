@@ -3,7 +3,7 @@ import React, { useState, useRef, useCallback } from 'react';
 // ─── API base ─────────────────────────────────────────────────────────────────
 const API_BASE = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL)
     ? import.meta.env.VITE_API_BASE_URL
-    : 'http://localhost:8000';
+    : 'http://localhost:8001';
 
 // ─── Loading stages ───────────────────────────────────────────────────────────
 const STAGES = [
@@ -42,14 +42,19 @@ function validate(data) {
 export default function PatientUploader({
     onPatientLoaded = () => { },
     userRole = 'doctor',   // 'doctor' | 'nurse' (patient never sees this)
+    token = null,
 }) {
-    const [state, setState] = useState('idle');   // idle | loading | success | error
+    const [state, setState] = useState('idle');   // idle | loading | success | error | batch
     const [dragOver, setDragOver] = useState(false);
     const [progress, setProgress] = useState(0);
     const [stageMsg, setStageMsg] = useState('');
     const [patient, setPatient] = useState(null);
     const [warnings, setWarnings] = useState([]);
     const [errorMsg, setErrorMsg] = useState('');
+    // batch mode
+    const [patientList, setPatientList] = useState([]);
+    const [activeBatchId, setActiveBatchId] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
     const fileRef = useRef();
     const animRef = useRef();
 
@@ -70,10 +75,58 @@ export default function PatientUploader({
         next();
     }, []);
 
+    // ── CSV row parser helper — parse a single row string into a Patient object ────
+    const parseRow = useCallback((header, rawRow) => {
+        const values = [];
+        let inQuote = false, cur = '';
+        for (let ch of rawRow) {
+            if (ch === '"') { inQuote = !inQuote; }
+            else if (ch === ',' && !inQuote) { values.push(cur.trim()); cur = ''; }
+            else { cur += ch; }
+        }
+        values.push(cur.trim());
+        const row = {};
+        header.forEach((h, i) => { row[h] = (values[i] || '').replace(/^"|"$/g, '').trim(); });
+
+        const diagnoses = row['diagnoses_icd10']
+            ? row['diagnoses_icd10'].split(',').map(d => d.trim()).filter(Boolean) : [];
+        const labs = {};
+        if (row['lab_values']) {
+            row['lab_values'].split('|').forEach(segment => {
+                const m = segment.match(/([^:]+):\s*([\d.]+)/);
+                if (m) labs[m[1].trim()] = parseFloat(m[2]);
+            });
+        }
+        const medications = row['medications']
+            ? row['medications'].split(',').map(m => m.trim()).filter(Boolean) : [];
+        return {
+            patient_id:   row['patient_id']  || undefined,
+            _displayName: row['patient_name'] || row['patient_id'] || 'Unknown',
+            _note:        row['intended_trial_match'] || '',
+            age:          parseInt(row['age'], 10) || 0,
+            gender:       row['gender'] || 'unknown',
+            zip_code:     row['zip_code'] || '00000',
+            lat:          row['lat'] ? parseFloat(row['lat']) : undefined,
+            lng:          row['lng'] ? parseFloat(row['lng']) : undefined,
+            diagnoses, labs, medications,
+            history_text: row['clinical_history'] || '',
+        };
+    }, []);
+
+    // ── CSV parser — returns array of ALL patients in the file ─────────────────
+    const parseCSVAllRows = useCallback((csvText) => {
+        const lines = csvText.trim().split('\n').filter(Boolean);
+        if (lines.length < 2) throw new Error('CSV must have a header row and at least one data row.');
+        const header = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+        return lines.slice(1).map(line => parseRow(header, line));
+    }, [parseRow]);
+
     // ── Process file ──────────────────────────────────────────────────────────────
     const processFile = useCallback(async (file) => {
-        if (!file || !file.name.endsWith('.json')) {
-            setErrorMsg('Please upload a valid .json file.');
+        const isJson = file?.name.endsWith('.json');
+        const isCsv  = file?.name.endsWith('.csv');
+        if (!file || (!isJson && !isCsv)) {
+            setErrorMsg('Please upload a valid .json or .csv file.');
             setState('error');
             return;
         }
@@ -87,19 +140,32 @@ export default function PatientUploader({
         setProgress(0);
         runStages();
 
-        // Parse JSON
-        let data;
+        let parsedData;  // single Patient obj (JSON) OR array of Patients (CSV)
         try {
             const text = await file.text();
-            data = JSON.parse(text);
-        } catch {
+            if (isCsv) {
+                parsedData = parseCSVAllRows(text);              // returns Patient[]
+            } else {
+                parsedData = JSON.parse(text);                   // returns single Patient
+            }
+        } catch (err) {
             clearTimeout(animRef.current);
-            setErrorMsg('Invalid JSON — could not parse file.');
+            setErrorMsg(err.message || 'Could not parse file.');
             setState('error');
             return;
         }
 
-        // Validate
+        // ── Batch CSV: multiple patients ─────────────────────────────────────────
+        if (Array.isArray(parsedData)) {
+            await new Promise(r => setTimeout(r, 1800)); // let stages animate
+            clearTimeout(animRef.current);
+            setPatientList(parsedData);
+            setState('batch');  // new state — show patient selector
+            return;
+        }
+
+        // ── Single patient (JSON) ── validate then POST ──────────────────────────
+        const data = parsedData;
         const { errors, warnings: warns } = validate(data);
         if (errors.length) {
             clearTimeout(animRef.current);
@@ -108,33 +174,56 @@ export default function PatientUploader({
             return;
         }
         setWarnings(warns);
-
-        // Wait for stages to finish visually
         await new Promise(r => setTimeout(r, 2000));
 
-        // ── POST /ingest/patient ───────────────────────────────────────────────────
         try {
-            const { patient_id, ...rest } = data; // strip patient_id — sent by backend
+            console.log("DEBUG FRONTEND - PatientUploader token before fetch:", token ? token.substring(0, 20) + "..." : "null/undefined");
+            
             const res = await fetch(`${API_BASE}/ingest/patient`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(rest),
+                headers: { 
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify(data),
             });
             if (!res.ok) {
                 const body = await res.json().catch(() => ({}));
                 throw new Error(body?.detail || body?.message || `Server error (${res.status})`);
             }
-            const anon = await res.json(); // AnonymizedPatient
+            const anon = await res.json();
             setPatient(anon);
             setState('success');
             onPatientLoaded(anon);
         } catch (err) {
-            // On API error — show error state, NO fake data fallback per spec
             clearTimeout(animRef.current);
             setErrorMsg(err.message || 'Failed to anonymize patient. Please try again.');
             setState('error');
         }
-    }, [runStages, onPatientLoaded]);
+    }, [runStages, onPatientLoaded, parseCSVAllRows, token]);
+
+    // ── Select a patient from batch list ─────────────────────────────────────────
+    const selectBatchPatient = useCallback(async (p) => {
+        setActiveBatchId(p.patient_id);
+        const { _displayName, _note, ...patientPayload } = p;
+        try {
+            const res = await fetch(`${API_BASE}/ingest/patient`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify(patientPayload),
+            });
+            const anon = res.ok ? await res.json() : patientPayload;
+            onPatientLoaded({ ...anon, _displayName: p._displayName });
+        } catch {
+            onPatientLoaded({ ...patientPayload, _displayName: p._displayName });
+        }
+    }, [onPatientLoaded, token]);
+
+
+
 
     // ── Drag handlers ─────────────────────────────────────────────────────────────
     const onDrop = (e) => {
@@ -154,6 +243,9 @@ export default function PatientUploader({
         setPatient(null);
         setWarnings([]);
         setErrorMsg('');
+        setPatientList([]);
+        setActiveBatchId(null);
+        setSearchTerm('');
     };
 
     return (
@@ -169,6 +261,9 @@ export default function PatientUploader({
           to   { opacity:1; transform:translateY(0); }
         }
         .fade-up { animation: fadeUp 0.3s ease-out forwards; }
+        .delay-100 { animation-delay: 100ms; opacity: 0; }
+        .delay-200 { animation-delay: 200ms; opacity: 0; }
+        .delay-300 { animation-delay: 300ms; opacity: 0; }
       `}</style>
 
             {/* ── Title ── */}
@@ -176,7 +271,7 @@ export default function PatientUploader({
                 <h3 className="text-[#0F766E] font-bold text-sm flex items-center gap-1.5">
                     🧑‍⚕️ Patient Record Intake
                 </h3>
-                {state === 'success' && (
+                {(state === 'success' || state === 'batch') && (
                     <button onClick={reset} className="text-[#0D9488] text-xs font-semibold hover:text-[#0F766E] transition-colors">
                         Clear ↺
                     </button>
@@ -206,14 +301,14 @@ export default function PatientUploader({
                         <input
                             ref={fileRef}
                             type="file"
-                            accept=".json"
+                            accept=".json,.csv"
                             className="hidden"
                             onChange={e => processFile(e.target.files?.[0])}
                         />
                         <div className="anim-float text-4xl mb-3">☁️</div>
                         <p className="text-[#0F766E] font-semibold text-sm">Drop De-identified Patient Record Here</p>
                         <p className="text-teal-400 text-xs mt-1 underline underline-offset-2">or click to browse files</p>
-                        <p className="text-slate-400 text-[10px] mt-2">Supports JSON · HL7 FHIR · CSV · Max 10MB</p>
+                        <p className="text-slate-400 text-[10px] mt-2">Supports JSON · CSV · HL7 FHIR · Max 10MB</p>
                     </div>
 
                     <div className="mt-3 bg-teal-50 border border-teal-100 rounded-xl px-3 py-2">
@@ -263,7 +358,7 @@ export default function PatientUploader({
                     </div>
 
                     {/* Summary chips */}
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-1.5 fade-up delay-200">
                         <span className="bg-teal-50 text-teal-700 border border-teal-200 rounded-full px-2.5 py-0.5 text-xs font-semibold">
                             {patient.age} yrs
                         </span>
@@ -280,15 +375,19 @@ export default function PatientUploader({
 
                     {/* Lab values */}
                     {patient.labs && Object.keys(patient.labs).length > 0 && (
-                        <div className="flex justify-between bg-white rounded-xl px-3 py-2 border border-teal-100">
-                            {Object.entries(patient.labs).map(([k, v]) => (
-                                <div key={k} className="flex flex-col items-center">
-                                    <span className={`text-sm font-bold tabular-nums ${labColor(k, v)}`}>
-                                        {v}{labSuffix(k).startsWith('%') ? '%' : ''}
-                                    </span>
-                                    <span className="text-[9px] text-slate-400 mt-0.5 leading-none">{k}</span>
-                                </div>
-                            ))}
+                        <div className="flex justify-between bg-white rounded-xl px-3 py-2 border border-teal-100 fade-up delay-300">
+                    {Object.entries(patient.labs).map(([k, v]) => {
+                                // Handle both plain numbers (8.4) and rich lab objects ({value, unit, ...})
+                                const displayVal = (typeof v === 'object' && v !== null) ? v.value : v;
+                                return (
+                                    <div key={k} className="flex flex-col items-center">
+                                        <span className={`text-sm font-bold tabular-nums ${labColor(k, displayVal)}`}>
+                                            {displayVal}{labSuffix(k).startsWith('%') ? '%' : ''}
+                                        </span>
+                                        <span className="text-[9px] text-slate-400 mt-0.5 leading-none">{k}</span>
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
 
@@ -305,6 +404,68 @@ export default function PatientUploader({
                             {w}
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* ════════════════════════════════════════════════════════════════════
+          BATCH STATE — Patient selector list (multi-patient CSV)
+      ════════════════════════════════════════════════════════════════════ */}
+            {state === 'batch' && (
+                <div className="fade-up space-y-2">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-teal-700 text-xs font-bold">
+                            📋 {patientList.length} patients loaded — click to screen
+                        </span>
+                        <button
+                            onClick={() => fileRef.current?.click()}
+                            className="text-teal-500 text-[10px] underline hover:text-teal-700"
+                        >Upload another</button>
+                    </div>
+                    
+                    {/* Filter Input */}
+                    <div className="relative mb-2">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
+                        <input
+                            type="text"
+                            placeholder="Filter by name, ID, or diagnosis..."
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                            className="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
+                        />
+                    </div>
+
+                    <div className="max-h-64 overflow-y-auto space-y-1.5 pr-0.5">
+                        {patientList.filter(p => {
+                            if (!searchTerm) return true;
+                            const term = searchTerm.toLowerCase();
+                            return (p.patient_id?.toLowerCase().includes(term) ||
+                                    p._displayName?.toLowerCase().includes(term) ||
+                                    p.diagnoses?.join(', ').toLowerCase().includes(term));
+                        }).map((p) => {
+                            const isActive = activeBatchId === p.patient_id;
+                            return (
+                                <button
+                                    key={p.patient_id}
+                                    onClick={() => selectBatchPatient(p)}
+                                    className={`w-full text-left rounded-xl px-3 py-2 border transition-all duration-150
+                                        ${isActive
+                                            ? 'border-teal-400 bg-teal-50 shadow-sm'
+                                            : 'border-slate-100 bg-white hover:border-teal-300 hover:bg-teal-50/40'}`}
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="font-mono text-teal-700 text-[11px] font-semibold">{p.patient_id}</p>
+                                            <p className="text-slate-500 text-[10px] truncate max-w-[180px]">{p._displayName}</p>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-1">
+                                            <span className="text-[10px] text-slate-500">{p.age}y · {p.gender}</span>
+                                            <span className="text-[9px] text-slate-400 font-medium">Diagnoses: {p.diagnoses?.join(', ')}</span>
+                                        </div>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
             )}
 

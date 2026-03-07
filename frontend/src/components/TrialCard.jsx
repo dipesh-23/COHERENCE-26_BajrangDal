@@ -26,23 +26,20 @@ const truncate = (s = '', n) => s.length > n ? s.slice(0, n) + '…' : s;
 // ─── Skeleton (null guard) ────────────────────────────────────────────────────
 function Skeleton() {
     return (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden animate-pulse">
-            <div className="flex items-start justify-between p-4 pb-2">
-                <div className="flex-1 space-y-2 pr-4">
-                    <div className="h-4 bg-slate-100 rounded-full w-3/4" />
-                    <div className="h-3 bg-slate-100 rounded-full w-1/3" />
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="flex items-start justify-between p-5 pb-3">
+                <div className="flex-1 space-y-2.5 pr-4">
+                    <div className="h-5 anim-shimmer-skeleton rounded-full w-3/4" />
+                    <div className="h-3.5 anim-shimmer-skeleton rounded-full w-1/3" />
                 </div>
-                <div className="w-14 h-14 rounded-full bg-slate-100 shrink-0" />
+                <div className="w-16 h-16 rounded-full anim-shimmer-skeleton shrink-0" />
             </div>
-            <div className="px-4 py-2 flex gap-2">
-                {[40, 56, 32, 48].map(w => <div key={w} className="h-5 bg-slate-100 rounded-full" style={{ width: w }} />)}
+            <div className="px-5 py-3 flex gap-2">
+                {[56, 72, 48, 64].map(w => <div key={w} className="h-6 anim-shimmer-skeleton rounded-full" style={{ width: w }} />)}
             </div>
-            <div className="px-4 py-2 flex gap-2">
-                {[3, 3, 3].map((_, i) => <div key={i} className="h-7 bg-slate-100 rounded-full w-20" />)}
-            </div>
-            <div className="border-t border-slate-50 px-4 py-3 flex justify-between">
-                <div className="h-8 w-20 bg-slate-100 rounded-full" />
-                <div className="h-8 w-28 bg-slate-100 rounded-full" />
+            <div className="border-t border-slate-100 px-5 py-4 flex justify-between">
+                <div className="h-9 w-24 anim-shimmer-skeleton rounded-xl" />
+                <div className="h-9 w-32 anim-shimmer-skeleton rounded-xl" />
             </div>
         </div>
     );
@@ -67,12 +64,12 @@ function ScoreRing({ score, color }) {
 
     const deg = (pct / 100) * 360;
     return (
-        <div className="relative w-14 h-14 shrink-0 flex items-center justify-center">
+        <div className="relative w-16 h-16 shrink-0 flex items-center justify-center">
             <div className="absolute inset-0 rounded-full"
-                style={{ background: `conic-gradient(${color} ${deg}deg, #F1F5F9 ${deg}deg)` }} />
-            <div className="absolute inset-[5px] rounded-full bg-white flex flex-col items-center justify-center">
-                <span className="font-bold text-[13px] leading-none" style={{ color }}>{pct}</span>
-                <span className="text-[8px] text-slate-400 leading-none mt-0.5">Match</span>
+                style={{ background: `conic-gradient(${color} ${deg}deg, #E2E8F0 ${deg}deg)` }} />
+            <div className="absolute inset-[5px] rounded-full bg-white flex flex-col items-center justify-center shadow-sm">
+                <span className="font-black text-[14px] leading-none" style={{ color }}>{pct}</span>
+                <span className="text-[8px] text-slate-400 leading-none mt-0.5 font-semibold uppercase tracking-wide">Match</span>
             </div>
         </div>
     );
@@ -88,27 +85,36 @@ function ScoreBadge({ score }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function TrialCard({
     // All fields come directly from MatchResult (POST /match response)
-    trial_name = null,
+    title = null,
     trial_id = 'NCT-0000-000',
     match_score = 87,
     confidence = 'HIGH',
     phase = 'Phase III',
     sponsor = 'Sponsor',
     location = '—',
-    distance_string = null,
-    hpsa_flagged = false,
+    site_info = {},
     criteria_breakdown = [],
     missing_data = [],
     exclusion_flags = [],
     recommendation = 'Proceed',
     // UI
+    markerColor = '#0D9488',
     isSelected = false,
-    userRole = 'doctor',   // 'doctor' | 'nurse' | 'patient'
+    userRole = 'doctor',
     onSelect = () => { },
     onViewReport = () => { },
+    onLocate = () => { },
+    // Dropout Predictor
+    completion_likelihood = null,
+    dropout_reason = '',
+    visits_required = null,
+    telehealth_enabled = false,
+    // Polypharmacy Safety
+    polypharmacy_flags = [],
+    investigational_drug = '',
 }) {
     // Null guard → skeleton
-    if (!trial_name) return <Skeleton />;
+    if (!title) return <Skeleton />;
 
     const tier = getTier(match_score);
     const isDoctor = userRole === 'doctor';
@@ -117,72 +123,48 @@ export default function TrialCard({
     const isCrc = userRole === 'crc';
 
     return (
-        <div
+        <button
             onClick={onSelect}
-            className={`bg-white rounded-2xl border border-slate-100 border-l-[5px] cursor-pointer transition-all duration-200
+            className={`bg-white rounded-2xl border border-slate-200 border-l-[5px] w-full text-left cursor-pointer transition-all duration-200
         ${tier.border}
         ${isSelected
-                    ? `ring-2 ring-[#0D9488] ring-offset-2 shadow-lg ${tier.glow}`
-                    : `shadow-sm hover:shadow-lg hover:scale-[1.01] hover:shadow-[#0D9488]/10`
+                    ? `ring-2 ring-[#0D9488] ring-offset-2 shadow-xl ${tier.glow}`
+                    : `shadow-sm hover:shadow-lg hover:scale-[1.005] hover:shadow-[#0D9488]/8`
                 }`}
         >
-            <style>{`
-        @keyframes scaleIn {
-          from { opacity:0; transform:scale(0.7); }
-          to   { opacity:1; transform:scale(1); }
-        }
-        .chip-in { animation: scaleIn 0.22s ease-out both; }
-
-        /* Tooltip */
-        .chip-wrap { position:relative; }
-        .chip-wrap:hover .chip-tip { visibility:visible; opacity:1; transform:translateX(-50%) translateY(0); }
-        .chip-tip {
-          visibility:hidden; opacity:0;
-          transform:translateX(-50%) translateY(6px);
-          transition:opacity 0.15s ease, transform 0.15s ease;
-          position:absolute; bottom:calc(100% + 8px); left:50%;
-          pointer-events:none; z-index:50;
-        }
-        .nurse-chip-wrap:hover .chip-tip { pointer-events:auto; }
-
-        @keyframes goldShimmer {
-          0%   { background-position:-200% 0; }
-          100% { background-position: 200% 0; }
-        }
-        .hpsa-shimmer {
-          background: linear-gradient(90deg,#FDE68A 25%,#FEF9C3 50%,#FDE68A 75%);
-          background-size: 200% auto;
-          animation: goldShimmer 2s linear infinite;
-        }
-      `}</style>
 
             {/* ── TOP ROW ── */}
-            <div className="flex items-start justify-between p-4 pb-2">
+            <div className="flex items-start justify-between px-5 pt-5 pb-3">
                 <div className="flex-1 min-w-0 pr-3">
                     <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                        <h3 className="font-bold text-slate-800 text-[15px] leading-tight">{trial_name}</h3>
-                        {hpsa_flagged && (
+                        <div className="w-3 h-3 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: markerColor }}></div>
+                        <h3 className="font-black text-[#0F1E34] text-[15px] leading-snug tracking-tight">{title}</h3>
+                        {site_info?.hpsa_bonus && (
                             <span className="hpsa-shimmer text-amber-800 border border-amber-200 rounded-full px-2.5 py-0.5 text-[10px] font-bold">⭐ Underserved</span>
                         )}
                     </div>
-                    <span className="font-mono text-[11px] bg-slate-50 text-slate-400 px-2 py-0.5 rounded border border-slate-100">{trial_id}</span>
+                    <div className="flex items-center gap-2">
+                        <span className="font-mono text-[11px] bg-slate-50 text-slate-400 px-2 py-0.5 rounded border border-slate-200">{trial_id}</span>
+                        <span className="text-[11px] text-slate-400 font-medium">{phase} · {sponsor}</span>
+                    </div>
                 </div>
 
-                {/* Score display — ring for doctor/nurse, badge for patient */}
-                <div className="flex flex-col items-end">
+                {/* Score display */}
+                <div className="flex flex-col items-end gap-1">
                     {isPatient
                         ? <ScoreBadge score={match_score} />
                         : <ScoreRing score={match_score} color={tier.hex} />
                     }
                     {isCrc && (
-                        <div className={`text-[10px] font-bold px-2 py-0.5 rounded-full text-center mt-1 ${recommendation === 'Proceed'
-                                ? 'bg-teal-50 text-teal-600 border border-teal-200'
+                        <div className={`text-[10px] font-bold px-2 py-0.5 rounded-full text-center ${
+                            recommendation === 'Proceed'
+                                ? 'bg-[#0D9488]/10 text-[#0D9488] border border-[#0D9488]/20'
                                 : recommendation === 'Verify First'
-                                    ? 'bg-amber-50 text-amber-600 border border-amber-200'
-                                    : 'bg-red-50 text-red-600 border border-red-200'
-                            }`}>
+                                    ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                    : 'bg-red-50 text-red-700 border border-red-200'
+                        }`}>
                             {recommendation === 'Proceed' ? '✅ Screen Now'
-                                : recommendation === 'Verify First' ? '🔍 Verify First'
+                                : recommendation === 'Verify First' ? '🔍 Verify'
                                     : '🚫 Excluded'}
                         </div>
                     )}
@@ -201,9 +183,9 @@ export default function TrialCard({
                     <>
                         <span className="text-slate-500 text-xs flex items-center gap-1">
                             📍 {location}
-                            {distance_string && (
+                            {site_info?.distance_miles !== null && site_info?.distance_miles !== undefined && (
                                 <span className="text-teal-500 font-medium bg-teal-50 border border-teal-100 rounded-full px-2 py-0.5 text-[10px] ml-1">
-                                    • {distance_string}
+                                    • {site_info.distance_miles} miles away
                                 </span>
                             )}
                         </span>
@@ -214,15 +196,92 @@ export default function TrialCard({
                         <span className="text-slate-400 text-xs" title={sponsor}>🏢 {truncate(sponsor, 22)}</span>
                         <span className="text-slate-500 text-xs flex items-center gap-1">
                             📍 {location}
-                            {distance_string && (
+                            {site_info?.distance_miles !== null && site_info?.distance_miles !== undefined && (
                                 <span className="text-teal-500 font-medium bg-teal-50 border border-teal-100 rounded-full px-2 py-0.5 text-[10px] ml-1">
-                                    • {distance_string}
+                                    • {site_info.distance_miles} miles away
                                 </span>
                             )}
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onLocate(); }}
+                                className="ml-2 text-[10px] text-[#0D9488] hover:text-white border border-[#0D9488] hover:bg-[#0D9488] px-2 py-0.5 rounded transition-colors"
+                            >
+                                Map ↗
+                            </button>
                         </span>
                     </>
                 )}
             </div>
+
+            {/* ── DROPOUT PREDICTOR STRIP (doctor / nurse / crc only) ── */}
+            {!isPatient && completion_likelihood !== null && (
+                <div className={`px-4 py-2.5 border-t flex items-center justify-between gap-3 ${
+                    completion_likelihood >= 80 ? 'bg-emerald-50/60 border-emerald-100'
+                    : completion_likelihood >= 60 ? 'bg-amber-50/60 border-amber-100'
+                    : 'bg-red-50/60 border-red-100'
+                }`}>
+                    <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-base shrink-0">
+                            {completion_likelihood >= 80 ? '🟢' : completion_likelihood >= 60 ? '🟡' : '🔴'}
+                        </span>
+                        <div className="min-w-0">
+                            <p className={`text-[10px] font-bold uppercase tracking-wide ${
+                                completion_likelihood >= 80 ? 'text-emerald-700'
+                                : completion_likelihood >= 60 ? 'text-amber-700'
+                                : 'text-red-700'
+                            }`}>Completion Likelihood</p>
+                            <p className="text-[9px] text-slate-500 truncate max-w-[200px]" title={dropout_reason}>
+                                {dropout_reason || 'low dropout risk'}
+                                {telehealth_enabled && <span className="ml-1 text-teal-500 font-semibold">· Telehealth ✅</span>}
+                                {visits_required && <span className="ml-1 text-slate-400">· {visits_required} visits</span>}
+                            </p>
+                        </div>
+                    </div>
+                    <div className={`shrink-0 text-center px-3 py-1 rounded-full font-bold text-sm border ${
+                        completion_likelihood >= 80 ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                        : completion_likelihood >= 60 ? 'bg-amber-100 text-amber-800 border-amber-200'
+                        : 'bg-red-100 text-red-800 border-red-200'
+                    }`}>
+                        {completion_likelihood}%
+                    </div>
+                </div>
+            )}
+
+            {/* ── POLYPHARMACY DANGER FLAG (doctor / nurse / crc only) ── */}
+            {!isPatient && polypharmacy_flags?.length > 0 && (
+                <div className="border-t border-red-100 bg-red-50/70">
+                    <div className="px-4 pt-2.5 pb-1 flex items-center gap-2">
+                        <span className="text-base">💊</span>
+                        <p className="text-[10px] font-bold uppercase tracking-wide text-red-700">
+                            Polypharmacy Safety Alert
+                        </p>
+                        <span className="text-[9px] bg-red-200 text-red-800 font-bold px-1.5 rounded-full">
+                            {polypharmacy_flags.length} interaction{polypharmacy_flags.length > 1 ? 's' : ''} detected
+                        </span>
+                    </div>
+                    <div className="px-4 pb-2.5 space-y-1.5">
+                        {polypharmacy_flags.map((flag, i) => {
+                            const sev = flag.severity;
+                            const sevCls = sev === 'HIGH'
+                                ? 'bg-red-600 text-white'
+                                : sev === 'MODERATE'
+                                ? 'bg-amber-500 text-white'
+                                : 'bg-blue-500 text-white';
+                            return (
+                                <div key={i} className="flex items-start gap-2 bg-white rounded-xl px-3 py-2 border border-red-100 shadow-sm">
+                                    <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded shrink-0 mt-0.5 ${sevCls}`}>{sev}</span>
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] font-semibold text-slate-700">
+                                            {investigational_drug} ↔ <span className="text-red-600">{flag.interacting_drug}</span>
+                                        </p>
+                                        <p className="text-[9px] text-slate-500 leading-snug mt-0.5">{flag.description}</p>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                        <p className="text-[8px] text-red-400 italic text-right">⚕️ Flag for clinical pharmacist review before enrollment</p>
+                    </div>
+                </div>
+            )}
 
             {/* ── CRITERIA ROW (doctor / nurse) ── */}
             {!isPatient && criteria_breakdown.length > 0 && (
@@ -230,8 +289,8 @@ export default function TrialCard({
                     <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-2">Criteria</p>
                     <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
                         {criteria_breakdown.map((c, i) => {
-                            const isMet = c.status === 'met';
-                            const isUnmet = c.status === 'unmet';
+                            const isMet = c.status === 'pass';
+                            const isUnmet = c.status === 'fail';
                             const chipCls = isMet ? 'bg-teal-500 text-white'
                                 : isUnmet ? 'bg-red-500 text-white'
                                     : 'bg-amber-400 text-slate-900';
@@ -318,29 +377,29 @@ export default function TrialCard({
                     {(isDoctor || isCrc) && (
                         <button
                             onClick={e => { e.stopPropagation(); onViewReport(); }}
-                            className="group flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full bg-gradient-to-r from-[#0D9488] to-[#0F766E] text-white shadow-md shadow-[#0D9488]/20 hover:shadow-lg hover:shadow-[#0D9488]/30 transition-all"
+                            className="group flex items-center gap-1.5 text-xs font-bold px-4 py-2.5 rounded-xl bg-[#0D9488] text-white shadow-sm shadow-[#0D9488]/20 hover:bg-[#0F766E] hover:shadow-md transition-all duration-150"
                         >
-                            {isCrc ? '📋 Open Screening Report' : 'Report'} <span className="transition-transform group-hover:translate-x-0.5">→</span>
+                            {isCrc ? '📋 Screening Report' : 'Full Report'} <span className="transition-transform group-hover:translate-x-0.5">→</span>
                         </button>
                     )}
                     {isNurse && (
                         <button
                             onClick={e => { e.stopPropagation(); onViewReport(); }}
-                            className="text-xs font-bold px-4 py-2 rounded-full bg-[#0F766E] text-white shadow-md shadow-[#0F766E]/20 hover:bg-[#0D9488] transition-all"
+                            className="text-xs font-bold px-4 py-2.5 rounded-xl bg-amber-500 text-white shadow-sm hover:bg-amber-600 transition-all"
                         >
-                            Flag for Review
+                            🔍 Flag for Review
                         </button>
                     )}
                     {isPatient && (
                         <button
                             onClick={e => { e.stopPropagation(); onViewReport(); }}
-                            className="text-xs font-bold px-4 py-2 rounded-full bg-teal-400 text-white shadow-md shadow-teal-400/20 hover:bg-teal-500 transition-all"
+                            className="text-xs font-bold px-4 py-2.5 rounded-xl bg-[#0D9488] text-white shadow-sm hover:bg-[#0F766E] transition-all"
                         >
                             Learn More →
                         </button>
                     )}
                 </div>
             </div>
-        </div>
+        </button>
     );
 }

@@ -4,7 +4,7 @@ import { useState, useCallback, useRef } from 'react';
 const API_BASE =
     (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL)
         ? import.meta.env.VITE_API_BASE_URL
-        : 'http://localhost:8000';
+        : 'http://localhost:8001';
 
 // ── Initial state shapes ──────────────────────────────────────────────────────
 const INIT_LOADING = { upload: null, match: null, report: null, verify: null, feedback: null };
@@ -38,7 +38,7 @@ const DEMO_RESULTS = [
     {
         patient_id: "P-84921",
         trial_id: "NCT-2026-EMBARK-001",
-        trial_name: "EMBARK-T2DM Phase III",
+        title: "EMBARK-T2DM Phase III",
         match_score: 92,
         confidence: "HIGH",
         phase: "Phase III",
@@ -49,22 +49,22 @@ const DEMO_RESULTS = [
         criteria_breakdown: [
             {
                 name: "Age 45–70",
-                status: "met",
+                status: "pass",
                 detail: "Patient age 62 falls within the required range of 45 to 70 years."
             },
             {
                 name: "T2DM Diagnosis (ICD E11.9)",
-                status: "met",
+                status: "pass",
                 detail: "Confirmed Type 2 Diabetes Mellitus diagnosis on record."
             },
             {
                 name: "HbA1c ≥ 7.5%",
-                status: "met",
+                status: "pass",
                 detail: "Patient HbA1c of 8.4% exceeds the minimum threshold of 7.5%."
             },
             {
                 name: "Active Metformin Use",
-                status: "met",
+                status: "pass",
                 detail: "Metformin 1000mg is listed as an active medication."
             },
             {
@@ -74,7 +74,7 @@ const DEMO_RESULTS = [
             },
             {
                 name: "No Prior GLP-1 Agonist Use",
-                status: "met",
+                status: "pass",
                 detail: "No GLP-1 agonist medications found in the patient's medication history."
             }
         ],
@@ -87,7 +87,7 @@ const DEMO_RESULTS = [
     {
         patient_id: "P-84921",
         trial_id: "NCT-2026-RENAL-002",
-        trial_name: "Renal-Protect Urban Outcomes",
+        title: "Renal-Protect Urban Outcomes",
         match_score: 78,
         confidence: "MEDIUM",
         phase: "Phase II",
@@ -98,22 +98,22 @@ const DEMO_RESULTS = [
         criteria_breakdown: [
             {
                 name: "Stage 3 CKD (eGFR 30–59)",
-                status: "met",
+                status: "pass",
                 detail: "Patient eGFR of 48 mL/min places them in Stage 3a CKD, matching this criterion exactly."
             },
             {
                 name: "Hypertension Diagnosis",
-                status: "met",
+                status: "pass",
                 detail: "Essential Hypertension (ICD I10) confirmed on patient record."
             },
             {
                 name: "ACE Inhibitor or ARB Use",
-                status: "met",
+                status: "pass",
                 detail: "Lisinopril 10mg (ACE inhibitor) is an active medication."
             },
             {
                 name: "Urban HPSA Resident",
-                status: "met",
+                status: "pass",
                 detail: "Patient ZIP 10029 (East Harlem) is a federally designated Health Professional Shortage Area."
             },
             {
@@ -139,7 +139,7 @@ const DEMO_RESULTS = [
     {
         patient_id: "P-84921",
         trial_id: "NCT-2026-GLP1-003",
-        trial_name: "GLP-1 Aggressive Titration Study",
+        title: "GLP-1 Aggressive Titration Study",
         match_score: 42,
         confidence: "HIGH",
         phase: "Phase II",
@@ -150,32 +150,32 @@ const DEMO_RESULTS = [
         criteria_breakdown: [
             {
                 name: "Age 40–75",
-                status: "met",
+                status: "pass",
                 detail: "Patient age 62 is within the acceptable age range."
             },
             {
                 name: "T2DM Diagnosis",
-                status: "met",
+                status: "pass",
                 detail: "Type 2 Diabetes Mellitus confirmed."
             },
             {
                 name: "HbA1c ≥ 8.0%",
-                status: "met",
+                status: "pass",
                 detail: "Patient HbA1c of 8.4% meets the minimum threshold."
             },
             {
                 name: "eGFR ≥ 60 mL/min (Safety Threshold)",
-                status: "unmet",
+                status: "fail",
                 detail: "Patient eGFR of 48 mL/min is BELOW the mandatory safety threshold of 60 mL/min. GLP-1 aggressive titration carries nephrotoxicity risk in patients with eGFR < 60. This is a hard exclusion."
             },
             {
                 name: "No Metformin Contraindication",
-                status: "met",
+                status: "pass",
                 detail: "Patient is actively tolerating Metformin without documented contraindication."
             },
             {
                 name: "No Prior GLP-1 Exposure",
-                status: "met",
+                status: "pass",
                 detail: "No GLP-1 agonist found in medication history."
             }
         ],
@@ -194,7 +194,7 @@ const DEMO_REPORTS = {
     "NCT-2026-EMBARK-001": {
         patient_id: "P-84921",
         trial_id: "NCT-2026-EMBARK-001",
-        trial_name: "EMBARK-T2DM Phase III",
+        title: "EMBARK-T2DM Phase III",
         match_score: 92,
         confidence: "HIGH",
         phase: "Phase III",
@@ -203,12 +203,12 @@ const DEMO_REPORTS = {
         distance_string: "4 miles away",
         hpsa_flagged: false,
         criteria_breakdown: [
-            { name: "Age 45–70", status: "met", detail: "Patient age 62 within required range 45–70." },
-            { name: "T2DM Diagnosis (ICD E11.9)", status: "met", detail: "Confirmed Type 2 Diabetes Mellitus on record." },
-            { name: "HbA1c ≥ 7.5%", status: "met", detail: "HbA1c 8.4% exceeds the 7.5% minimum threshold." },
-            { name: "Active Metformin Use", status: "met", detail: "Metformin 1000mg is an active medication." },
+            { name: "Age 45–70", status: "pass", detail: "Patient age 62 within required range 45–70." },
+            { name: "T2DM Diagnosis (ICD E11.9)", status: "pass", detail: "Confirmed Type 2 Diabetes Mellitus on record." },
+            { name: "HbA1c ≥ 7.5%", status: "pass", detail: "HbA1c 8.4% exceeds the 7.5% minimum threshold." },
+            { name: "Active Metformin Use", status: "pass", detail: "Metformin 1000mg is an active medication." },
             { name: "eGFR ≥ 45 mL/min", status: "verify", detail: "eGFR 48 mL/min marginally above threshold of 45. Lab confirmation within 30 days required." },
-            { name: "No Prior GLP-1 Agonist Use", status: "met", detail: "No GLP-1 agonist found in medication history." }
+            { name: "No Prior GLP-1 Agonist Use", status: "pass", detail: "No GLP-1 agonist found in medication history." }
         ],
         missing_data: ["eGFR lab confirmation within 30 days"],
         exclusion_flags: [],
@@ -219,7 +219,7 @@ const DEMO_REPORTS = {
     "NCT-2026-RENAL-002": {
         patient_id: "P-84921",
         trial_id: "NCT-2026-RENAL-002",
-        trial_name: "Renal-Protect Urban Outcomes",
+        title: "Renal-Protect Urban Outcomes",
         match_score: 78,
         confidence: "MEDIUM",
         phase: "Phase II",
@@ -228,10 +228,10 @@ const DEMO_REPORTS = {
         distance_string: "1.2 miles away",
         hpsa_flagged: true,
         criteria_breakdown: [
-            { name: "Stage 3 CKD (eGFR 30–59)", status: "met", detail: "eGFR 48 places patient in Stage 3a CKD, matching criterion exactly." },
-            { name: "Hypertension Diagnosis", status: "met", detail: "Essential Hypertension (ICD I10) confirmed." },
-            { name: "ACE Inhibitor or ARB Use", status: "met", detail: "Lisinopril 10mg (ACE inhibitor) is active." },
-            { name: "Urban HPSA Resident", status: "met", detail: "ZIP 10029 (East Harlem) is a federally designated HPSA." },
+            { name: "Stage 3 CKD (eGFR 30–59)", status: "pass", detail: "eGFR 48 places patient in Stage 3a CKD, matching criterion exactly." },
+            { name: "Hypertension Diagnosis", status: "pass", detail: "Essential Hypertension (ICD I10) confirmed." },
+            { name: "ACE Inhibitor or ARB Use", status: "pass", detail: "Lisinopril 10mg (ACE inhibitor) is active." },
+            { name: "Urban HPSA Resident", status: "pass", detail: "ZIP 10029 (East Harlem) is a federally designated HPSA." },
             { name: "No Active Malignancy", status: "verify", detail: "No cancer history recorded but formal oncology clearance not documented." },
             { name: "Proteinuria Confirmed (UACR)", status: "verify", detail: "Urine albumin-to-creatinine ratio not present in current record." }
         ],
@@ -244,7 +244,7 @@ const DEMO_REPORTS = {
     "NCT-2026-GLP1-003": {
         patient_id: "P-84921",
         trial_id: "NCT-2026-GLP1-003",
-        trial_name: "GLP-1 Aggressive Titration Study",
+        title: "GLP-1 Aggressive Titration Study",
         match_score: 42,
         confidence: "HIGH",
         phase: "Phase II",
@@ -253,12 +253,12 @@ const DEMO_REPORTS = {
         distance_string: "5.8 miles away",
         hpsa_flagged: false,
         criteria_breakdown: [
-            { name: "Age 40–75", status: "met", detail: "Patient age 62 within acceptable range." },
-            { name: "T2DM Diagnosis", status: "met", detail: "Type 2 Diabetes Mellitus confirmed." },
-            { name: "HbA1c ≥ 8.0%", status: "met", detail: "HbA1c 8.4% meets the minimum threshold." },
-            { name: "eGFR ≥ 60 mL/min (Safety Threshold)", status: "unmet", detail: "eGFR 48 mL/min is BELOW the mandatory safety threshold of 60 mL/min. Hard exclusion — nephrotoxicity risk." },
-            { name: "No Metformin Contraindication", status: "met", detail: "Patient tolerating Metformin without documented contraindication." },
-            { name: "No Prior GLP-1 Exposure", status: "met", detail: "No GLP-1 agonist in medication history." }
+            { name: "Age 40–75", status: "pass", detail: "Patient age 62 within acceptable range." },
+            { name: "T2DM Diagnosis", status: "pass", detail: "Type 2 Diabetes Mellitus confirmed." },
+            { name: "HbA1c ≥ 8.0%", status: "pass", detail: "HbA1c 8.4% meets the minimum threshold." },
+            { name: "eGFR ≥ 60 mL/min (Safety Threshold)", status: "fail", detail: "eGFR 48 mL/min is BELOW the mandatory safety threshold of 60 mL/min. Hard exclusion — nephrotoxicity risk." },
+            { name: "No Metformin Contraindication", status: "pass", detail: "Patient tolerating Metformin without documented contraindication." },
+            { name: "No Prior GLP-1 Exposure", status: "pass", detail: "No GLP-1 agonist in medication history." }
         ],
         missing_data: [],
         exclusion_flags: [
@@ -294,8 +294,7 @@ export function useTrialEngine(token = null) {
     const [reportData, setReportData] = useState(null);
     const [loadingStatus, setLoadingStatus] = useState(INIT_LOADING);
     const [errors, setErrors] = useState(INIT_ERRORS);
-    const [isDemoMode, setIsDemoMode] = useState(false);
-    const [demoModeBanner, setDemoModeBanner] = useState(null);
+
 
     // ── Timer refs for auto-clearing errors ────────────────────────────────────
     const errTimers = useRef({});
@@ -364,20 +363,22 @@ export function useTrialEngine(token = null) {
     // ══════════════════════════════════════════════════════════════════════════
     // matchTrials(patient_id, top_k, filters) → POST /match
     // ══════════════════════════════════════════════════════════════════════════
-    const matchTrials = useCallback(async (patient_id, top_k = 5, filters = {}) => {
+    const matchTrials = useCallback(async (patientObj, top_k = 5, filters = {}) => {
         setLoading('match', 'Finding matching trials…');
         try {
             const res = await fetch(`${API_BASE}/match`, {
                 method: 'POST',
                 headers: authHeaders(token),
-                body: JSON.stringify({ patient_id, top_k, filters }),
+                body: JSON.stringify(patientObj),   // send full Patient object, not just patient_id
             });
             if (!res.ok) {
                 const body = await parseResponse(res);
                 throw new Error(body?.detail || body?.message || `Server error (${res.status})`);
             }
             const results = await parseResponse(res);
-            setMatchResults(Array.isArray(results) ? results : []);
+            // Backend returns { patient_id, matches: [...] }
+            const matches = results?.matches ?? results;
+            setMatchResults(Array.isArray(matches) ? matches : []);
         } catch (err) {
             setError('match', err.message || 'Matching failed.');
         } finally {
@@ -391,19 +392,6 @@ export function useTrialEngine(token = null) {
     const getReport = useCallback(async (patient_id, trial_id) => {
         setLoading('report', 'Generating transparency report…');
         try {
-            // Serve demo data instantly if in demo mode
-            if (isDemoMode) {
-                await new Promise(resolve => setTimeout(resolve, 800)); // realistic delay
-                const demoReport = DEMO_REPORTS[trial_id];
-                if (demoReport) {
-                    setReportData(demoReport);
-                } else {
-                    setError('report', 'Report not found for this trial in demo mode.');
-                }
-                clearLoading('report');
-                return;
-            }
-
             const res = await fetch(
                 `${API_BASE}/report/${encodeURIComponent(patient_id)}/${encodeURIComponent(trial_id)}`,
                 { headers: authHeaders(token) }
@@ -419,7 +407,7 @@ export function useTrialEngine(token = null) {
         } finally {
             clearLoading('report');
         }
-    }, [token, isDemoMode, setError, setLoading, clearLoading]);
+    }, [token, setError, setLoading, clearLoading]);
 
     // ══════════════════════════════════════════════════════════════════════════
     // verifyField(patient_id, field) → POST /verify/{patient_id}/{field}
@@ -511,33 +499,10 @@ export function useTrialEngine(token = null) {
     }, []);
 
     // ══════════════════════════════════════════════════════════════════════════
-    // toggleDemoMode — flips isDemoMode, updates banner message, and loads data
-    // ══════════════════════════════════════════════════════════════════════════
-    const toggleDemoMode = useCallback(() => {
-        setIsDemoMode(prev => {
-            const next = !prev;
-            if (next) {
-                loadDemoData();
-                setDemoModeBanner('⚡ Demo Mode — Using simulated patient data');
-            } else {
-                // Must be inside the setIsDemoMode callback or wrapped properly?
-                // Actually, clearAll is outside, but it's safe to call here since it sets other state.
-                setPatientData(null);
-                setMatchResults([]);
-                setReportData(null);
-                setLoadingStatus(INIT_LOADING);
-                setErrors(INIT_ERRORS);
-                setDemoModeBanner(null);
-            }
-            return next;
-        });
-    }, [loadDemoData]);
 
     // ══════════════════════════════════════════════════════════════════════════
     // clearAll — resets all state to initial
-    // ══════════════════════════════════════════════════════════════════════════
     const clearAll = useCallback(() => {
-        // Cancel any pending error-clear timers
         Object.values(errTimers.current).forEach(clearTimeout);
         errTimers.current = {};
         setPatientData(null);
@@ -545,8 +510,6 @@ export function useTrialEngine(token = null) {
         setReportData(null);
         setLoadingStatus(INIT_LOADING);
         setErrors(INIT_ERRORS);
-        setIsDemoMode(false);
-        setDemoModeBanner(null);
     }, []);
 
     // ── Return object ───────────────────────────────────────────────────────────
@@ -557,16 +520,14 @@ export function useTrialEngine(token = null) {
         getReport,
         verifyField,
         submitFeedback,
-        toggleDemoMode,
         clearAll,
+        setPatientData,
         // State
         patientData,
         matchResults,
         reportData,
         loadingStatus,
         errors,
-        isDemoMode,
-        demoModeBanner,
     };
 }
 
