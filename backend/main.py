@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from typing import List, Dict, Any
 from datetime import date
 import logging
@@ -323,6 +324,103 @@ def ingest_trial_pdf(file_path: str):
         return {"status": "success", "data": trial_data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- 3b. AI Explanation Endpoint ---
+class ExplainRequest(BaseModel):
+    trial_id: str
+    title: str = ""
+    match_score: float = 0
+    recommendation: str = ""
+    confidence: str = "MEDIUM"
+    criteria_breakdown: list = []
+    site_info: dict = {}
+    investigational_drug: str = ""
+    completion_likelihood: int = 95
+    missing_data: list = []
+
+@app.post("/explain")
+def explain_match(req: ExplainRequest):
+    """
+    Generates a structured clinical narrative summary for a
+    patient–trial match result. Uses deterministic template logic
+    — no external LLM API key required.
+    """
+    score = round(req.match_score)
+    passed = [c for c in req.criteria_breakdown if c.get("status") == "pass"]
+    failed = [c for c in req.criteria_breakdown if c.get("status") == "fail"]
+    verify = [c for c in req.criteria_breakdown if c.get("status") == "verify"]
+    total  = len(req.criteria_breakdown) or 1
+
+    # ── Eligibility summary sentence ─────────────────────────────────────
+    if req.recommendation == "Proceed":
+        eligibility = (
+            f"This patient meets all mandatory eligibility criteria for {req.trial_id}. "
+            f"A match score of {score}/100 indicates strong alignment with the protocol."
+        )
+    elif req.recommendation == "Verify First":
+        eligibility = (
+            f"The patient partially satisfies the inclusion criteria for {req.trial_id} "
+            f"(match score {score}/100). Manual chart review is recommended before proceeding."
+        )
+    else:
+        eligibility = (
+            f"The patient does not currently meet one or more hard eligibility criteria "
+            f"for {req.trial_id} (match score {score}/100). Enrolment is not recommended at this time."
+        )
+
+    # ── Criteria narrative ────────────────────────────────────────────────
+    passed_names = ", ".join(c.get("name", "") for c in passed[:4]) or "none recorded"
+    failed_names = ", ".join(c.get("name", "") for c in failed[:3]) or "none"
+    verify_names = ", ".join(c.get("name", "") for c in verify[:3])
+
+    criteria_text = (
+        f"{len(passed)} of {total} criteria passed ({passed_names}). "
+    )
+    if failed:
+        criteria_text += f"{len(failed)} criterion failed: {failed_names}. "
+    if verify:
+        criteria_text += f"{len(verify)} item(s) require verification: {verify_names}."
+
+    # ── Site & logistics ─────────────────────────────────────────────────
+    site   = req.site_info.get("location", "the trial site")
+    city   = req.site_info.get("city", "")
+    dist   = req.site_info.get("distance_miles")
+    dist_text = f"The trial is conducted at {site}, {city}."
+    if dist is not None:
+        dist_text += f" The patient is approximately {dist} miles from this site."
+
+    # ── Drug & completion ────────────────────────────────────────────────
+    drug_text = ""
+    if req.investigational_drug:
+        drug_text = f"The investigational agent is {req.investigational_drug}. "
+
+    completion_text = (
+        f"Estimated trial completion likelihood: {req.completion_likelihood}%."
+    )
+
+    # ── Missing data callout ──────────────────────────────────────────────
+    missing_text = ""
+    if req.missing_data:
+        missing_text = (
+            f"Note: {len(req.missing_data)} data field(s) were absent from the record "
+            f"({', '.join(req.missing_data[:3])}). Obtaining these values would improve "
+            f"scoring confidence."
+        )
+
+    narrative = (
+        f"{eligibility}\n\n"
+        f"**Criteria Summary:** {criteria_text}\n\n"
+        f"**Site & Logistics:** {dist_text} {drug_text}{completion_text}\n\n"
+        f"{missing_text}"
+    ).strip()
+
+    return {
+        "trial_id":  req.trial_id,
+        "score":     score,
+        "narrative": narrative,
+        "confidence": req.confidence,
+    }
 
 # --- 3. The Core Matching Endpoint (M3) ---
 @app.post("/match")

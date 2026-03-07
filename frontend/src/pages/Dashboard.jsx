@@ -717,7 +717,7 @@ export default function Dashboard({
                                                     <span className="w-4 h-4 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center text-[10px]">✓</span> 
                                                     Eligible To Proceed – {eligible.length} Trials
                                                 </h3>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
                                                     {eligible.map((r, i) => (
                                                         <ReportCard key={r.trial_id} report={r} index={i}
                                                             onClick={() => { setSelectedTrial(r); setIsReportOpen(true); }}
@@ -740,7 +740,7 @@ export default function Dashboard({
                                                     <span className="w-4 h-4 rounded bg-red-100 text-red-500 flex items-center justify-center text-[10px]">✕</span> 
                                                     Not Suitable – {unsuitable.length} Trials
                                                 </h3>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
                                                     {unsuitable.map((r, i) => (
                                                         <ReportCard key={r.trial_id} report={r} index={i}
                                                             onClick={() => { setSelectedTrial(r); setIsReportOpen(true); }}
@@ -816,6 +816,43 @@ export default function Dashboard({
 
 // ─── NEW REPORT CARD COMPONENT (Matches UI Mockup) ──────────────────────────
 function ReportCard({ report, index, onClick, isFlagged = false, onFlag = () => {} }) {
+    const [aiOpen, setAiOpen] = useState(false);
+    const [aiLoading, setAiLoading] = useState(false);
+    const [aiExplanation, setAiExplanation] = useState(null);
+
+    const fetchExplanation = async (e) => {
+        e.stopPropagation();
+        setAiOpen(o => !o);
+        if (aiExplanation || aiLoading) return; // already fetched
+        setAiLoading(true);
+        try {
+            const API = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL)
+                ? import.meta.env.VITE_API_BASE_URL : 'http://localhost:8001';
+            const res = await fetch(`${API}/explain`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    trial_id: report.trial_id,
+                    title: report.title || '',
+                    match_score: report.match_score || 0,
+                    recommendation: report.recommendation || '',
+                    confidence: report.confidence || 'MEDIUM',
+                    criteria_breakdown: report.criteria_breakdown || [],
+                    site_info: report.site_info || {},
+                    investigational_drug: report.investigational_drug || '',
+                    completion_likelihood: report.completion_likelihood || 95,
+                    missing_data: report.missing_data || [],
+                }),
+            });
+            const data = await res.json();
+            setAiExplanation(data.narrative || 'No explanation available.');
+        } catch {
+            setAiExplanation('Unable to fetch explanation. Please try again.');
+        } finally {
+            setAiLoading(false);
+        }
+    };
+
     const isProceed = report.recommendation === 'Proceed';
     const isVerify = report.recommendation === 'Verify First';
     const isUnsuitable = report.recommendation === 'Not Suitable';
@@ -949,6 +986,52 @@ function ReportCard({ report, index, onClick, isFlagged = false, onFlag = () => 
                         <div className="absolute inset-[3px] rounded-full bg-white flex flex-col items-center justify-center">
                             <span className="font-black text-[10px] text-slate-600">{displayScore}%</span>
                         </div>
+                    </div>
+                )}
+            </div>
+
+            {/* ✨ AI Explain button + collapsible panel */}
+            <div className="px-5 pb-2 pt-0" onClick={e => e.stopPropagation()}>
+                <button
+                    onClick={fetchExplanation}
+                    className={`w-full text-[11px] font-bold py-1.5 rounded-lg border transition-all duration-150 flex items-center justify-center gap-1.5
+                        ${aiOpen
+                            ? 'bg-violet-50 border-violet-300 text-violet-700'
+                            : 'bg-white border-slate-200 text-slate-500 hover:border-violet-300 hover:text-violet-600 hover:bg-violet-50'
+                        }`}
+                >
+                    {aiLoading ? (
+                        <><span className="animate-spin inline-block">⚙️</span> Generating...</>
+                    ) : (
+                        <>✨ {aiOpen ? 'Hide' : 'AI Explanation'}</>
+                    )}
+                </button>
+
+                {aiOpen && (
+                    <div className="mt-2 rounded-xl border border-violet-100 bg-violet-50/60 p-3.5 text-[11px] text-slate-700 leading-relaxed anim-fade-up">
+                        <div className="flex items-center gap-1.5 mb-2">
+                            <span className="text-violet-500 font-black text-xs">✨ AI Summary</span>
+                            <span className="text-[9px] text-violet-400 bg-violet-100 rounded px-1.5 py-0.5 font-bold uppercase tracking-wide">BiomedBERT · Clinical NLP</span>
+                        </div>
+                        {aiLoading ? (
+                            <div className="space-y-1.5">
+                                {[90, 70, 80].map((w, i) => (
+                                    <div key={i} className="h-2 bg-violet-100 rounded-full animate-pulse" style={{ width: `${w}%` }} />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {(aiExplanation || '').split('\n\n').map((para, i) => (
+                                    <p key={i}>
+                                        {para.split(/\*\*([^*]+)\*\*/).map((chunk, j) =>
+                                            j % 2 === 1
+                                                ? <strong key={j} className="text-violet-700">{chunk}</strong>
+                                                : chunk
+                                        )}
+                                    </p>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

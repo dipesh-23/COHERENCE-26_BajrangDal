@@ -118,12 +118,11 @@ export default function ScoreBreakdown({ score = 0, criteria_breakdown = [], con
                     </svg>
 
                     {/* Center label */}
-                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                         <span style={{ fontFamily: "'DM Mono', monospace" }}
-                            className="text-[38px] font-black leading-none tracking-tighter text-[#0a1c3c]">
+                            className="text-[28px] font-black leading-none tracking-tighter text-[#0a1c3c]">
                             {animScore.toFixed(0)}
                         </span>
-                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-1">Score</span>
                     </div>
                 </div>
 
