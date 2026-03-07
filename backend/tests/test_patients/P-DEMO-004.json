@@ -1,0 +1,26 @@
+{
+  "patient_id": "P-DEMO-004",
+  "age": 82,
+  "gender": "male",
+  "zip_code": "94305",
+  "diagnoses": [
+    "E11.9"
+  ],
+  "labs": {
+    "HbA1c": {
+      "value": 9.1,
+      "unit": "%",
+      "observation_date": "2026-02-28"
+    },
+    "eGFR": {
+      "value": 25,
+      "unit": "mL/min",
+      "observation_date": "2026-02-28"
+    }
+  },
+  "medications": [
+    "Insulin Glargine",
+    "Metformin 500mg"
+  ],
+  "history_text": "82-year-old male with poorly controlled Type 2 Diabetes and end-stage renal disease. eGFR is 25. HbA1c 9.1%. Prior use of semaglutide (Ozempic) discontinued due to GI side effects."
+}
