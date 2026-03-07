@@ -1,14 +1,68 @@
 import operator
 import re
+import math
 from typing import Dict, Any, List
 
 # Assuming your models are defined in backend/models/
 from models.patient import Patient
 from models.trial import Trial
 from modules.scorer import get_scorer
+from modules.drug_interactions import check_drug_interactions
 
 # In-memory audit log for the Hackathon 2026 Fairness Pitch
 audit_log = []
+
+def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    if None in (lat1, lon1, lat2, lon2):
+        return None
+    R = 3958.8 # Earth radius in miles
+    dLat = math.radians(lat2 - lat1)
+    dLon = math.radians(lon2 - lon1)
+    a = math.sin(dLat/2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dLon/2) ** 2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+    return round(R * c, 1)
+
+
+def calculate_completion_likelihood(distance_miles, visits_required, telehealth_enabled):
+    """
+    Heuristic Dropout Predictor.
+    Base: 95%. Penalizes for far distance and high visit burden. Rewards telehealth.
+    Returns (score: int, reason: str)
+    """
+    score = 95.0
+    reasons = []
+
+    # Distance penalty
+    if distance_miles is not None:
+        if distance_miles > 150:
+            score -= 30
+            reasons.append(f"patient lives {distance_miles:.0f} miles from site")
+        elif distance_miles > 75:
+            score -= 18
+            reasons.append(f"patient lives {distance_miles:.0f} miles from site")
+        elif distance_miles > 30:
+            score -= 8
+            reasons.append(f"patient lives {distance_miles:.0f} miles from site")
+
+    # Visit burden penalty
+    if visits_required > 40:
+        score -= 22
+        reasons.append(f"trial requires {visits_required} visits")
+    elif visits_required > 20:
+        score -= 12
+        reasons.append(f"trial requires {visits_required} visits")
+    elif visits_required > 10:
+        score -= 6
+        reasons.append(f"trial requires {visits_required} visits")
+
+    # Telehealth bonus
+    if telehealth_enabled:
+        score = min(score + 10, 95)
+        reasons.append("telehealth option available")
+
+    score = max(10, round(score))
+    reason_text = "; ".join(reasons) if reasons else "low dropout risk"
+    return score, reason_text
 
 def evaluate_operator(op_str: str, patient_val: float, threshold_val: float) -> bool:
     """Helper to evaluate dynamic math operators from Member 2's parser."""
@@ -56,18 +110,18 @@ def hard_filter(patient: Patient, criteria_json: Dict[str, Any]) -> List[Dict[st
             c_max = cond.get("max", 120)
             passed = c_min <= patient.age <= c_max
             results.append({
-                "criterion": "Age Requirement",
+                "name": "Age Requirement",
                 "status": "pass" if passed else "fail",
-                "reason": f"Age {patient.age} meets trial bounds ({c_min}-{c_max})." if passed else f"Age {patient.age} is outside required bounds ({c_min}-{c_max})."
+                "detail": f"Age {patient.age} meets trial bounds ({c_min}-{c_max})." if passed else f"Age {patient.age} is outside required bounds ({c_min}-{c_max})."
             })
             
         elif field == "gender":
             req_gender = cond.get("value", "any").lower()
             passed = (req_gender == "any" or patient.gender.lower() == req_gender)
             results.append({
-                "criterion": "Gender",
+                "name": "Gender",
                 "status": "pass" if passed else "fail",
-                "reason": f"Patient gender ({patient.gender}) matches requirement." if passed else f"Trial requires {req_gender.title()}."
+                "detail": f"Patient gender ({patient.gender}) matches requirement." if passed else f"Trial requires {req_gender.title()}."
             })
             
         elif field == "diagnosis":
@@ -76,9 +130,9 @@ def hard_filter(patient: Patient, criteria_json: Dict[str, Any]) -> List[Dict[st
             passed = any(req in patient_codes for req in req_codes)
             joined_reqs = ", ".join(req_codes)
             results.append({
-                "criterion": f"Diagnosis: {joined_reqs}",
+                "name": f"Diagnosis: {joined_reqs}",
                 "status": "pass" if passed else "fail",
-                "reason": f"Confirmed {joined_reqs} in patient record." if passed else f"Missing required diagnosis: {joined_reqs}."
+                "detail": f"Confirmed {joined_reqs} in patient record." if passed else f"Missing required diagnosis: {joined_reqs}."
             })
             
         elif field == "lab":
@@ -88,9 +142,9 @@ def hard_filter(patient: Patient, criteria_json: Dict[str, Any]) -> List[Dict[st
             if not patient_lab:
                 # Ethical Safeguard #3: Missing data is flagged, not failed.
                 results.append({
-                    "criterion": f"Lab: {lab_name}",
+                    "name": f"Lab: {lab_name}",
                     "status": "verify",
-                    "reason": f"{lab_name} value not present in record—requires manual verification."
+                    "detail": f"{lab_name} value not present in record—requires manual verification."
                 })
             else:
                 # Support multiple lab shapes:
@@ -106,9 +160,9 @@ def hard_filter(patient: Patient, criteria_json: Dict[str, Any]) -> List[Dict[st
 
                 passed = evaluate_operator(cond.get("operator"), float(val), float(cond.get("value")))
                 results.append({
-                    "criterion": f"Lab: {lab_name}",
+                    "name": f"Lab: {lab_name}",
                     "status": "pass" if passed else "fail",
-                    "reason": f"{lab_name} ({val}) meets {cond.get('operator')} {cond.get('value')} requirement." if passed else f"{lab_name} ({val}) does not meet threshold."
+                    "detail": f"{lab_name} ({val}) meets {cond.get('operator')} {cond.get('value')} requirement." if passed else f"{lab_name} ({val}) does not meet threshold."
                 })
 
         elif field == "treatment":
@@ -116,9 +170,9 @@ def hard_filter(patient: Patient, criteria_json: Dict[str, Any]) -> List[Dict[st
             patient_meds = [m.lower() for m in patient.medications]
             passed = req_drug.lower() in patient_meds or check_keyword_in_history(req_drug, patient.history_text)
             results.append({
-                "criterion": f"Prior Treatment: {req_drug}",
+                "name": f"Prior Treatment: {req_drug}",
                 "status": "pass" if passed else "fail",
-                "reason": f"Found evidence of {req_drug} usage." if passed else f"No record of required treatment: {req_drug}."
+                "detail": f"Found evidence of {req_drug} usage." if passed else f"No record of required treatment: {req_drug}."
             })
 
     # ---------------------------------------------------------
@@ -132,9 +186,9 @@ def hard_filter(patient: Patient, criteria_json: Dict[str, Any]) -> List[Dict[st
             patient_meds = [m.lower() for m in patient.medications]
             conflict = ex_drug.lower() in patient_meds or check_keyword_in_history(ex_drug, patient.history_text)
             results.append({
-                "criterion": f"Excluded Drug: {ex_drug}",
+                "name": f"Excluded Drug: {ex_drug}",
                 "status": "fail" if conflict else "pass",
-                "reason": f"Patient is currently taking excluded drug: {ex_drug}." if conflict else f"No conflict with {ex_drug}."
+                "detail": f"Patient is currently taking excluded drug: {ex_drug}." if conflict else f"No conflict with {ex_drug}."
             })
             
         elif field in ["condition", "other"]:
@@ -142,17 +196,17 @@ def hard_filter(patient: Patient, criteria_json: Dict[str, Any]) -> List[Dict[st
             # Look for the condition in the free-text history
             conflict = check_keyword_in_history(ex_cond, patient.history_text)
             results.append({
-                "criterion": f"Excluded Condition/Criteria: {ex_cond}",
+                "name": f"Excluded Condition/Criteria: {ex_cond}",
                 "status": "fail" if conflict else "pass",
-                "reason": f"Found evidence of excluded condition: {ex_cond}." if conflict else f"No evidence of {ex_cond}."
+                "detail": f"Found evidence of excluded condition: {ex_cond}." if conflict else f"No evidence of {ex_cond}."
             })
             
         elif field == "status" and cond.get("name") == "pregnant":
             conflict = check_keyword_in_history("pregnant", patient.history_text) or check_keyword_in_history("pregnancy", patient.history_text)
             results.append({
-                "criterion": "Exclusion: Pregnancy",
+                "name": "Exclusion: Pregnancy",
                 "status": "fail" if conflict else "pass",
-                "reason": "Record indicates active pregnancy." if conflict else "No evidence of pregnancy."
+                "detail": "Record indicates active pregnancy." if conflict else "No evidence of pregnancy."
             })
 
     return results
@@ -176,7 +230,7 @@ def match_patient_to_trial(patient: Patient, trial: Trial) -> Dict[str, Any]:
     is_eligible = not any(res["status"] == "fail" for res in criteria_breakdown)
     
     # 4. Calculate Confidence Penalty for missing data [cite: 37]
-    missing_fields = [res["criterion"] for res in criteria_breakdown if res["status"] == "verify"]
+    missing_fields = [res["name"] for res in criteria_breakdown if res["status"] == "verify"]
     confidence = max(0.1, 1.0 - (len(missing_fields) * 0.15))
 
     # 5. Semantic Soft Matching (S-BiomedBERT) 
@@ -191,11 +245,34 @@ def match_patient_to_trial(patient: Patient, trial: Trial) -> Dict[str, Any]:
         score = round((semantic_sim * confidence) * 100, 2)
 
     # 6. Site/Geographic Info [cite: 23]
+    site = trial.sites[0] if trial.sites else None
+    
+    distance = None
+    if site and site.lat and site.lng and patient.lat and patient.lng:
+        distance = haversine_distance(patient.lat, patient.lng, site.lat, site.lng)
+    
     site_info = {
-        "location": getattr(trial, "location", "Unknown"),
+        "location": site.facility if site else getattr(trial, "location", "Unknown"),
+        "city": site.city if site else "Unknown",
+        "state": site.state if site else "Unknown",
+        "lat": site.lat if site else None,
+        "lng": site.lng if site else None,
+        "distance_miles": distance,
         "is_remote": getattr(trial, "is_remote", False),
         "hpsa_bonus": getattr(trial, "is_hpsa_zone", False) # Safeguard #1 
     }
+
+    # 6b. Compute Dropout Predictor Score
+    visits_required = getattr(trial, "visits_required", 10)
+    telehealth_enabled = getattr(trial, "telehealth_enabled", False)
+    completion_likelihood, dropout_reason = calculate_completion_likelihood(
+        distance, visits_required, telehealth_enabled
+    )
+
+    # 6c. Polypharmacy Safety Check
+    investigational_drug = getattr(trial, "investigational_drug", "")
+    patient_medications = list(patient.medications) if patient.medications else []
+    polypharmacy_flags = check_drug_interactions(investigational_drug, patient_medications)
 
     # 7. Audit Logging for Fairness Pitch 
     audit_log.append({
@@ -214,5 +291,11 @@ def match_patient_to_trial(patient: Patient, trial: Trial) -> Dict[str, Any]:
         "criteria_breakdown": criteria_breakdown,
         "missing_data": missing_fields,
         "site_info": site_info,
+        "completion_likelihood": completion_likelihood,
+        "dropout_reason": dropout_reason,
+        "visits_required": visits_required,
+        "telehealth_enabled": telehealth_enabled,
+        "polypharmacy_flags": polypharmacy_flags,
+        "investigational_drug": investigational_drug,
         "llm_explanation": "Match confirmed with data confidence adjustment." if is_eligible else "Ineligible based on hard criteria mismatch."
     }

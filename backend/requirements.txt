@@ -1,4 +1,34 @@
+# Clinical Trial Matching Engine — Backend Dependencies
+# ── Core API ──────────────────────────────────────────────────────────────────
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
 pydantic>=2.0
-geopy>=2.4
-sentence-transformers>=2.2
-fastapi>=0.100
+pydantic-settings>=2.0
+
+# ── Database — Supabase ───────────────────────────────────────────────────────
+supabase>=2.4.0
+python-dotenv>=1.0.0
+
+# ── Medical NLP ───────────────────────────────────────────────────────────────
+sentence-transformers>=2.2.0
+torch>=2.0.0
+transformers>=4.30.0
+datasets>=2.14.0
+accelerate>=1.1.0
+
+# ── De-identification (Presidio) ──────────────────────────────────────────────
+presidio-analyzer>=2.2.0
+presidio-anonymizer>=2.2.0
+spacy>=3.6.0
+
+# ── PDF & HTTP utils ──────────────────────────────────────────────────────────
+pdfplumber>=0.10.0
+httpx>=0.26.0
+requests>=2.31.0
+
+# ── Geo matching ──────────────────────────────────────────────────────────────
+geopy>=2.4.0
+
+# ── Auth / JWT ────────────────────────────────────────────────────────────────
+PyJWT>=2.8.0
+cryptography>=41.0.0

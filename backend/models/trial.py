@@ -13,6 +13,7 @@ class TrialPhase(str, Enum):
 class TrialStatus(str, Enum):
     RECRUITING = "Recruiting"
     ACTIVE_NOT_RECRUITING = "Active, not recruiting"
+    ENROLLING_BY_INVITATION = "Enrolling by invitation"
     COMPLETED = "Completed"
 
 class TrialSite(BaseModel):
@@ -21,6 +22,8 @@ class TrialSite(BaseModel):
     state: str
     country: str
     zip_code: str
+    lat: Optional[float] = None
+    lng: Optional[float] = None
 
 class Trial(BaseModel):
     trial_id: str
@@ -44,6 +47,13 @@ class Trial(BaseModel):
     location: str = "Unknown"
     is_remote: bool = False
     is_hpsa_zone: bool = False # Safeguard #1: Health Professional Shortage Area bonus
+    
+    # --- Dropout Predictor Metrics ---
+    visits_required: int = 10
+    telehealth_enabled: bool = False
+    
+    # --- Safety: Investigational Drug (for Polypharmacy Check) ---
+    investigational_drug: str = ""
 
     @property
     def full_criteria_text(self) -> str:

@@ -1,0 +1,26 @@
+{
+  "patient_id": "P-DEMO-001",
+  "age": 52,
+  "gender": "male",
+  "zip_code": "94305",
+  "diagnoses": [
+    "E11.9"
+  ],
+  "labs": {
+    "HbA1c": {
+      "value": 8.4,
+      "unit": "%",
+      "observation_date": "2026-02-15"
+    },
+    "eGFR": {
+      "value": 72,
+      "unit": "mL/min",
+      "observation_date": "2026-02-15"
+    }
+  },
+  "medications": [
+    "Metformin 1000mg",
+    "Atorvastatin 20mg"
+  ],
+  "history_text": "52-year-old male with Type 2 Diabetes diagnosed in 2019. HbA1c is consistently elevated at 8.4%. No prior GLP-1 agonist use. No renal complications. Managed on Metformin."
+}

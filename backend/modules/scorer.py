@@ -1,5 +1,6 @@
 from sentence_transformers import SentenceTransformer, util
 import torch
+import os
 
 
 class MedicalScorer:
@@ -10,8 +11,11 @@ class MedicalScorer:
         """
         self.model = None
 
+        finetuned_path = os.path.join(os.path.dirname(__file__), "..", "models", "finetuned_trial_model")
+
         # Preferred model from the build plan
         for model_name in (
+            finetuned_path,
             "pritamdeka/S-BiomedBERT",  # may be private/gated
             "sentence-transformers/all-MiniLM-L6-v2",  # fast, public generic model
         ):

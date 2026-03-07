@@ -1,12 +1,15 @@
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any, Union
+import uuid
+from typing import List, Dict, Any, Union, Optional
 
 class Patient(BaseModel):
-    patient_id: str
+    patient_id: Optional[str] = Field(default_factory=lambda: f"P-{str(uuid.uuid4())[:8].upper()}")
     age: int
     gender: str
-    zip_code: str
-    
+    # --- M3/M4 Demographic & Geographic Metadata ---
+    zip_code: str = ""
+    lat: Optional[float] = None
+    lng: Optional[float] = None   
     # Diagnoses can be a list ["E11.9"] or a dict {"E11.9": "2023-01-01"}
     diagnoses: Union[List[str], Dict[str, Any]] = Field(default_factory=list)
     
