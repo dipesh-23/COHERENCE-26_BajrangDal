@@ -4,6 +4,7 @@ import TrialCard from '../components/TrialCard';
 import GeographyFilter from '../components/GeographyFilter';
 import MatchReport from '../components/MatchReport';
 import ScoreBreakdown from '../components/ScoreBreakdown';
+import NewPatientModal from '../components/NewPatientModal';
 
 // ── Simple CountUp Hook ──
 function useCountUp(endValue, duration = 2000) {
@@ -59,8 +60,26 @@ function labColor(key, value) {
 }
 
 const MARKER_COLORS = [
-    '#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', 
-    '#EC4899', '#06B6D4', '#F97316', '#6366F1', '#14B8A6'
+    '#EF4444', // red
+    '#3B82F6', // blue
+    '#10B981', // emerald
+    '#F59E0B', // amber
+    '#8B5CF6', // violet
+    '#EC4899', // pink
+    '#06B6D4', // cyan
+    '#F97316', // orange
+    '#6366F1', // indigo
+    '#14B8A6', // teal
+    '#84CC16', // lime
+    '#A855F7', // purple
+    '#0EA5E9', // sky
+    '#F43F5E', // rose
+    '#22C55E', // green
+    '#EAB308', // yellow
+    '#64748B', // slate
+    '#FB923C', // orange-400
+    '#818CF8', // indigo-400
+    '#2DD4BF', // teal-400
 ];
 
 // ─── Derive ScoreGauge breakdown from criteria_breakdown ──────────────────────
@@ -101,6 +120,18 @@ export default function Dashboard({
     const [viewMode, setViewMode] = useState('list');
     const [maxDistance, setMaxDistance] = useState('all');
     const [focusedLocation, setFocusedLocation] = useState(null);
+    const [isNewPatientOpen, setIsNewPatientOpen] = useState(false);
+    const [extraReviews, setExtraReviews] = useState(0);
+    const [flaggedTrials, setFlaggedTrials] = useState(new Set());
+
+    const toggleFlag = (trialId) => {
+        setFlaggedTrials(prev => {
+            const next = new Set(prev);
+            if (next.has(trialId)) next.delete(trialId);
+            else next.add(trialId);
+            return next;
+        });
+    };
 
     // ── Engine: all data + API calls come from here ──
     const {
@@ -138,7 +169,7 @@ export default function Dashboard({
 
     // ── Quick stats ──
     const topScore = matchResults.length ? Math.max(...matchResults.map(r => r.match_score || 0)) : '--';
-    const verifications = matchResults.reduce((acc, r) => acc + (r.missing_data?.length || 0), 0);
+    const verifications = matchResults.reduce((acc, r) => acc + (r.missing_data?.length || 0), 0) + extraReviews;
     const derivedBreakdown = useMemo(() => deriveBreakdown(selectedTrial?.criteria_breakdown), [selectedTrial]);
 
     // ── Handlers ──
@@ -148,6 +179,7 @@ export default function Dashboard({
         if (data?.patient_id) {
             setPatientData(data);
             matchTrials(data, 5, filters);
+            setIsNewPatientOpen(false); // Close if opened from modal
         }
     };
 
@@ -171,15 +203,43 @@ export default function Dashboard({
         <div className="flex flex-col h-screen w-full overflow-hidden font-sans bg-[#F8FAFC] text-[#0F1E34]">
 
 
-            {/* ═══ 1. STICKY TOP NAV ══════════════════════════════════════════════ */}
-            <nav className="sticky top-0 z-50 h-16 shrink-0 flex items-center justify-between px-8 bg-white border-b border-slate-200 shadow-sm">
+            {/* ═══ 1. STICKY TOP NAV ═════════════════════════════════════════════ */}
+            <nav className="sticky top-0 z-50 h-16 shrink-0 flex items-center justify-between px-8 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-sm"
+                style={{ animation: 'navSlideDown 0.4s cubic-bezier(0.16,1,0.3,1) forwards' }}>
+
+                {/* ── Keyframes injected inline ── */}
+                <style>{`
+                    @keyframes navSlideDown {
+                        from { opacity: 0; transform: translateY(-100%); }
+                        to   { opacity: 1; transform: translateY(0); }
+                    }
+                    @keyframes logoPulse {
+                        0%, 100% { box-shadow: 0 0 0 0 rgba(13,148,136,0.3); }
+                        50%       { box-shadow: 0 0 0 8px rgba(13,148,136,0); }
+                    }
+                    @keyframes dotPulseNav {
+                        0%, 100% { opacity: 1; transform: scale(1); }
+                        50%       { opacity: 0.6; transform: scale(1.4); }
+                    }
+                    @keyframes tabUnderline {
+                        from { transform: scaleX(0); }
+                        to   { transform: scaleX(1); }
+                    }
+                    .nav-tab-active-bar {
+                        animation: tabUnderline 0.25s ease-out forwards;
+                        transform-origin: center;
+                    }
+                    .logo-icon { animation: logoPulse 2.5s ease-in-out infinite; }
+                    .nav-dot { animation: dotPulseNav 1.8s ease-in-out infinite; }
+                `}</style>
+
                 {/* Logo */}
-                <div className="flex items-center gap-3">
-                    <div className="bg-[#0D9488]/10 rounded-xl p-2 border border-[#0D9488]/15">
+                <div className="flex items-center gap-3 group cursor-pointer">
+                    <div className="logo-icon bg-[#0D9488]/10 rounded-xl p-2 border border-[#0D9488]/20 transition-all duration-300 group-hover:bg-[#0D9488]/20 group-hover:scale-110">
                         <span className="text-xl leading-none">🏥</span>
                     </div>
                     <div>
-                        <span className="text-[#0F1E34] font-black text-[18px] tracking-tight block leading-tight">
+                        <span className="text-[#0F1E34] font-black text-[18px] tracking-tight block leading-tight group-hover:text-[#0D9488] transition-colors duration-200">
                             TrialSync<span className="text-[#0D9488]">.ai</span>
                         </span>
                         <span className="text-slate-400 text-[10px] font-semibold uppercase tracking-wider block">Clinical Research Platform</span>
@@ -188,11 +248,12 @@ export default function Dashboard({
 
                 {/* Center nav tabs */}
                 <div className="flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
-                    {NAV_TABS.map((label) => (
+                    {NAV_TABS.map((label, i) => (
                         <button
                             key={label}
                             onClick={() => setActiveTab(label)}
-                            className={`relative px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                            style={{ animationDelay: `${i * 60 + 100}ms`, animation: 'navSlideDown 0.5s cubic-bezier(0.16,1,0.3,1) both' }}
+                            className={`relative px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 hover:scale-105 active:scale-95 ${
                                 activeTab === label
                                     ? 'bg-[#0D9488]/8 text-[#0D9488]'
                                     : 'text-slate-500 hover:text-[#0F1E34] hover:bg-slate-100'
@@ -200,7 +261,7 @@ export default function Dashboard({
                         >
                             {label}
                             {activeTab === label && (
-                                <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-[#0D9488] rounded-full" />
+                                <span className="nav-tab-active-bar absolute bottom-0 left-3 right-3 h-0.5 bg-gradient-to-r from-[#0D9488] to-[#14B8A6] rounded-full" />
                             )}
                         </button>
                     ))}
@@ -208,39 +269,48 @@ export default function Dashboard({
 
                 {/* Right — status + user */}
                 <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1.5">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 anim-pulse" />
+                    <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1.5 hover:bg-emerald-100 transition-colors duration-150">
+                        <div className="nav-dot w-2 h-2 rounded-full bg-emerald-500" />
                         <span className="text-emerald-700 text-xs font-semibold">Engine Online</span>
                     </div>
                     {currentUser && (
-                        <div className="flex items-center gap-2 border border-slate-200 rounded-full pl-1.5 pr-3 py-1.5 bg-white shadow-sm">
-                            <div className="w-7 h-7 rounded-full bg-[#0D9488]/10 border border-[#0D9488]/20 flex items-center justify-center text-sm">🔬</div>
+                        <div className="flex items-center gap-2 border border-slate-200 rounded-full pl-1.5 pr-3 py-1.5 bg-white shadow-sm hover:border-[#0D9488]/40 hover:shadow-md hover:shadow-[#0D9488]/10 transition-all duration-200 cursor-default">
+                            <div className="w-7 h-7 rounded-full bg-[#0D9488]/10 border border-[#0D9488]/20 flex items-center justify-center text-sm hover:bg-[#0D9488]/20 transition-colors duration-150">🔬</div>
                             <span className="text-[#0F1E34] text-xs font-bold">{currentUser.email?.split('@')[0] || 'Doctor'}</span>
                         </div>
                     )}
                     <button
                         onClick={onLogout}
-                        className="text-slate-500 hover:text-red-500 text-xs font-semibold border border-slate-200 hover:border-red-200 hover:bg-red-50 rounded-full px-4 py-1.5 transition-all duration-150"
+                        className="group text-slate-500 hover:text-red-500 text-xs font-semibold border border-slate-200 hover:border-red-200 hover:bg-red-50 rounded-full px-4 py-1.5 transition-all duration-200 hover:scale-105 active:scale-95 flex items-center gap-1.5"
                     >
-                        Sign Out
+                        <span className="transition-transform duration-200 group-hover:-translate-x-0.5">←</span> Sign Out
                     </button>
                 </div>
             </nav>
 
             {/* ── STATS STRIP ── */}
-            <div className="bg-white px-8 py-5 flex items-center justify-between border-b border-slate-100 shrink-0">
+            <div className="bg-white px-8 py-5 flex items-center justify-between border-b border-slate-100 shrink-0"
+                style={{ animation: 'statsSlideUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.15s both' }}>
+                <style>{`
+                    @keyframes statsSlideUp {
+                        from { opacity: 0; transform: translateY(12px); }
+                        to   { opacity: 1; transform: translateY(0); }
+                    }
+                `}</style>
                 <div>
                     <h1 className="text-[#0F1E34] font-black text-2xl tracking-tight">
-                        Good morning, <span className="text-[#0D9488]">{currentUser?.email?.split('@')[0] || 'Doctor'}</span> 👋
+                        Good morning, <span className="text-[#0D9488] inline-block hover:scale-105 transition-transform duration-200 cursor-default">{currentUser?.email?.split('@')[0] || 'Doctor'}</span> 👋
                     </h1>
                     <p className="text-slate-400 text-sm mt-0.5">Clinical Trials Office · TrialSync.ai Research Center</p>
                 </div>
                 <div className="flex items-center gap-3">
                     {[
-                        { icon: '🔬', label: 'Trials Screened', value: matchResults.length, bg: 'bg-[#0D9488]/8', text: 'text-[#0D9488]', border: 'border-[#0D9488]/15' },
-                        { icon: '⚠️', label: 'Need Verification', value: verifications, bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-100' },
-                    ].map(s => (
-                        <div key={s.label} className={`flex items-center gap-3 px-5 py-3 rounded-2xl border ${s.bg} ${s.border} shadow-sm`}>
+                        { icon: '🔬', label: 'Trials Screened', value: matchResults.length, bg: 'bg-[#0D9488]/8', text: 'text-[#0D9488]', border: 'border-[#0D9488]/15', glow: 'hover:shadow-[#0D9488]/15' },
+                        { icon: '⚠️', label: 'Need Verification', value: verifications, bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-100', glow: 'hover:shadow-amber-100' },
+                    ].map((s, i) => (
+                        <div key={s.label}
+                            style={{ animationDelay: `${i * 80 + 200}ms`, animation: 'statsSlideUp 0.5s cubic-bezier(0.16,1,0.3,1) both' }}
+                            className={`flex items-center gap-3 px-5 py-3 rounded-2xl border ${s.bg} ${s.border} shadow-sm hover:shadow-md ${s.glow} hover:-translate-y-0.5 transition-all duration-200 cursor-default`}>
                             <span className="text-xl leading-none">{s.icon}</span>
                             <div>
                                 <p className={`font-black text-xl leading-none ${s.text}`}>
@@ -257,23 +327,19 @@ export default function Dashboard({
             {patientData && (
                 <div className="bg-slate-50/80 border-b border-teal-100 px-6 py-2.5 flex items-center gap-3 shrink-0 relative z-30">
                     <span className="text-slate-400 text-[11px] font-bold uppercase tracking-wider">Quick Actions:</span>
-                    <button onClick={() => { }} className="bg-white hover:bg-teal-50 text-teal-700 border border-teal-200 rounded-lg px-3 py-1.5 text-xs font-bold transition-all duration-150 flex items-center gap-1.5 shadow-sm">
-                        📤 Export Screening Report
-                    </button>
-                    <button onClick={() => { }} className="bg-white hover:bg-teal-50 text-teal-700 border border-teal-200 rounded-lg px-3 py-1.5 text-xs font-bold transition-all duration-150 flex items-center gap-1.5 shadow-sm">
-                        📧 Email to Investigator
-                    </button>
-                    <button onClick={() => { }} className="bg-white hover:bg-amber-50 text-amber-700 border border-amber-200 rounded-lg px-3 py-1.5 text-xs font-bold transition-all duration-150 flex items-center gap-1.5 shadow-sm">
+                    <button onClick={() => setExtraReviews(prev => prev + 1)} className="bg-white hover:bg-amber-50 text-amber-700 border border-amber-200 rounded-lg px-3 py-1.5 text-xs font-bold transition-all duration-150 flex items-center gap-1.5 shadow-sm">
                         ⚠️ Flag for Review
                     </button>
                     <button
-                        onClick={() => {/* useTrialEngine clearAll via hook, but here we just leave as UI or mock if needed. Actually, we should trigger clearAll -> hook */ }}
+                        onClick={() => setIsNewPatientOpen(true)}
                         className="ml-auto bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-bold transition-all duration-150 flex items-center gap-1.5 shadow-sm"
                     >
-                        🔄 New Patient
+                        ➕ Real Patient Entry
                     </button>
                 </div>
             )}
+            
+            <NewPatientModal isOpen={isNewPatientOpen} onClose={() => setIsNewPatientOpen(false)} onSubmit={handlePatientLoaded} />
 
             {/* ═══ 2. THREE-COLUMN BODY ═══════════════════════════════════════════ */}
             <main className="flex flex-1 h-[calc(100vh-64px)] overflow-hidden">
@@ -288,6 +354,7 @@ export default function Dashboard({
                             onPatientLoaded={handlePatientLoaded}
                             userRole={currentUser?.role || 'crc'}
                             token={token}
+                            externalPatient={patientData}
                         />
                     </div>
 
@@ -629,7 +696,7 @@ export default function Dashboard({
                                         <div className="flex items-center gap-3">
                                             {[
                                                 { label: 'PROCEED', count: matchResults.filter(r => r.recommendation === 'Proceed').length, bg: 'bg-emerald-50/50', border: 'border-emerald-200', text: 'text-emerald-600', countText: 'text-emerald-700' },
-                                                { label: 'REVIEW', count: matchResults.filter(r => r.recommendation === 'Verify First').length, bg: 'bg-amber-50/50', border: 'border-amber-200', text: 'text-amber-600', countText: 'text-amber-700' },
+                                                { label: 'REVIEW', count: flaggedTrials.size, bg: 'bg-amber-50/50', border: 'border-amber-200', text: 'text-amber-600', countText: 'text-amber-700' },
                                                 { label: 'NOT SUITABLE', count: matchResults.filter(r => r.recommendation === 'Not Suitable').length, bg: 'bg-red-50/50', border: 'border-red-200', text: 'text-red-500', countText: 'text-red-600' }
                                             ].map(stat => (
                                                 <div key={stat.label} className={`flex flex-col items-center justify-center w-24 h-24 rounded-2xl border ${stat.bg} ${stat.border} shadow-sm`}>
@@ -652,7 +719,11 @@ export default function Dashboard({
                                                 </h3>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                                     {eligible.map((r, i) => (
-                                                        <ReportCard key={r.trial_id} report={r} index={i} onClick={() => { setSelectedTrial(r); setIsReportOpen(true); }} />
+                                                        <ReportCard key={r.trial_id} report={r} index={i}
+                                                            onClick={() => { setSelectedTrial(r); setIsReportOpen(true); }}
+                                                            isFlagged={flaggedTrials.has(r.trial_id)}
+                                                            onFlag={() => toggleFlag(r.trial_id)}
+                                                        />
                                                     ))}
                                                 </div>
                                             </div>
@@ -671,7 +742,11 @@ export default function Dashboard({
                                                 </h3>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                                     {unsuitable.map((r, i) => (
-                                                        <ReportCard key={r.trial_id} report={r} index={i} onClick={() => { setSelectedTrial(r); setIsReportOpen(true); }} />
+                                                        <ReportCard key={r.trial_id} report={r} index={i}
+                                                            onClick={() => { setSelectedTrial(r); setIsReportOpen(true); }}
+                                                            isFlagged={flaggedTrials.has(r.trial_id)}
+                                                            onFlag={() => toggleFlag(r.trial_id)}
+                                                        />
                                                     ))}
                                                 </div>
                                             </div>
@@ -740,7 +815,7 @@ export default function Dashboard({
 }
 
 // ─── NEW REPORT CARD COMPONENT (Matches UI Mockup) ──────────────────────────
-function ReportCard({ report, index, onClick }) {
+function ReportCard({ report, index, onClick, isFlagged = false, onFlag = () => {} }) {
     const isProceed = report.recommendation === 'Proceed';
     const isVerify = report.recommendation === 'Verify First';
     const isUnsuitable = report.recommendation === 'Not Suitable';
@@ -861,7 +936,10 @@ function ReportCard({ report, index, onClick }) {
                 </div>
 
                 {isUnsuitable ? (
-                    <button className="text-xs font-bold bg-white border border-slate-200 text-slate-600 rounded-lg px-4 py-2 hover:bg-slate-50">
+                    <button
+                        onClick={e => { e.stopPropagation(); }}
+                        className="text-xs font-bold bg-white border border-slate-200 text-slate-600 rounded-lg px-4 py-2 hover:bg-slate-50"
+                    >
                         Details
                     </button>
                 ) : (
@@ -873,6 +951,20 @@ function ReportCard({ report, index, onClick }) {
                         </div>
                     </div>
                 )}
+            </div>
+
+            {/* Flag for Review button */}
+            <div className="px-5 pb-4 pt-0">
+                <button
+                    onClick={e => { e.stopPropagation(); onFlag(); }}
+                    className={`w-full text-[11px] font-bold py-1.5 rounded-lg border transition-all duration-150 flex items-center justify-center gap-1.5
+                        ${ isFlagged
+                            ? 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'
+                            : 'bg-white border-slate-200 text-slate-500 hover:border-amber-300 hover:text-amber-600 hover:bg-amber-50'
+                        }`}
+                >
+                    {isFlagged ? '✅ Flagged for Review' : '🚩 Flag for Review'}
+                </button>
             </div>
         </div>
     );

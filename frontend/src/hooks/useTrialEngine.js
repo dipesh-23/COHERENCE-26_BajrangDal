@@ -369,7 +369,13 @@ export function useTrialEngine(token = null) {
             const res = await fetch(`${API_BASE}/match`, {
                 method: 'POST',
                 headers: authHeaders(token),
-                body: JSON.stringify(patientObj),   // send full Patient object, not just patient_id
+                body: JSON.stringify({
+                    ...patientObj,
+                    // Merge filter fields so the backend can do distance filtering
+                    filter_zip: filters.zip || patientObj.zip_code || '',
+                    filter_radius_miles: filters.radius_miles || 9999,
+                    filter_hpsa_only: filters.hpsa_only || false,
+                }),
             });
             if (!res.ok) {
                 const body = await parseResponse(res);

@@ -243,6 +243,14 @@ def match_patient_to_trial(patient: Patient, trial: Trial) -> Dict[str, Any]:
         
         # Normalize to 0-100 and weight by confidence
         score = round((semantic_sim * confidence) * 100, 2)
+    else:
+        # Ineligible patients still get a PARTIAL score based on criteria proportion passed
+        # This shows % alignment even when hard filters fail — avoids all-zero results
+        total_criteria = len(criteria_breakdown) or 1
+        passed = sum(1 for r in criteria_breakdown if r["status"] == "pass")
+        partial_ratio = passed / total_criteria
+        # Scale 0–45: ineligible patients cap at 45 to clearly separate from eligible (46+)
+        score = round(partial_ratio * 45 * confidence, 2)
 
     # 6. Site/Geographic Info [cite: 23]
     site = trial.sites[0] if trial.sites else None

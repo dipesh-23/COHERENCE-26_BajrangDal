@@ -123,7 +123,7 @@ export default function TrialCard({
     const isCrc = userRole === 'crc';
 
     return (
-        <button
+        <div
             onClick={onSelect}
             className={`bg-white rounded-2xl border border-slate-200 border-l-[5px] w-full text-left cursor-pointer transition-all duration-200
         ${tier.border}
@@ -400,6 +400,6 @@ export default function TrialCard({
                     )}
                 </div>
             </div>
-        </button>
+        </div>
     );
 }

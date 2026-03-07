@@ -112,13 +112,19 @@ def safe_upsert(table: str, record: dict[str, Any]) -> bool:
 
 
 def safe_insert(table: str, record: dict[str, Any]) -> bool:
-    """Insert a record. Returns True on success, False on error."""
+    """Insert a record. Returns True on success, False on error.
+    Silently swallows duplicate-key violations (Postgres code 23505)."""
     try:
         db = get_db()
         db.table(table).insert(record).execute()
         return True
     except Exception as exc:
-        log.error(f"DB insert exception [{table}]: {exc}")
+        exc_str = str(exc)
+        # Suppress duplicate key noise — happens when re-running a match for the same patient
+        if "23505" in exc_str or "duplicate key" in exc_str.lower() or "already exists" in exc_str.lower():
+            log.debug(f"[{table}] duplicate key skipped (expected on re-match)")
+        else:
+            log.error(f"DB insert exception [{table}]: {exc}")
         return False
 
 

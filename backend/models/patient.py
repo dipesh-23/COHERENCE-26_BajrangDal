@@ -22,7 +22,12 @@ class Patient(BaseModel):
     # The free-text notes that Member 1's anonymizer scrubs
     history_text: str = ""
 
+    # ── Location filter fields (sent by frontend GeographyFilter) ──────────────
+    filter_zip: Optional[str] = None            # ZIP to filter from (defaults to zip_code)
+    filter_radius_miles: Optional[float] = 9999 # 9999 = no limit
+    filter_hpsa_only: Optional[bool] = False    # Only return HPSA-designated sites
+
     @property
     def medical_history(self) -> str:
         """Alias for M3's Semantic Soft Matcher."""
-        return self.history_text
+        return self.history_text

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 
 // ─── API base ─────────────────────────────────────────────────────────────────
 const API_BASE = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL)
@@ -43,6 +43,7 @@ export default function PatientUploader({
     onPatientLoaded = () => { },
     userRole = 'doctor',   // 'doctor' | 'nurse' (patient never sees this)
     token = null,
+    externalPatient = null, // The patient created from the New Patient entry modal
 }) {
     const [state, setState] = useState('idle');   // idle | loading | success | error | batch
     const [dragOver, setDragOver] = useState(false);
@@ -57,6 +58,17 @@ export default function PatientUploader({
     const [searchTerm, setSearchTerm] = useState('');
     const fileRef = useRef();
     const animRef = useRef();
+    // ── External patient injection (from manual intake modal) ───────────────
+    useEffect(() => {
+        if (externalPatient) {
+            setPatientList(prev => {
+                const exists = prev.find(p => p.patient_id === externalPatient.patient_id);
+                return exists ? prev : [externalPatient, ...prev];
+            });
+            setActiveBatchId(externalPatient.patient_id);
+            setState('batch');
+        }
+    }, [externalPatient]);
 
     // ── Stage animation ──────────────────────────────────────────────────────────
     const runStages = useCallback(() => {
@@ -89,7 +101,7 @@ export default function PatientUploader({
         header.forEach((h, i) => { row[h] = (values[i] || '').replace(/^"|"$/g, '').trim(); });
 
         const diagnoses = row['diagnoses_icd10']
-            ? row['diagnoses_icd10'].split(',').map(d => d.trim()).filter(Boolean) : [];
+            ? row['diagnoses_icd10'].split(/[|,]/).map(d => d.trim()).filter(Boolean) : [];
         const labs = {};
         if (row['lab_values']) {
             row['lab_values'].split('|').forEach(segment => {
@@ -455,7 +467,6 @@ export default function PatientUploader({
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <p className="font-mono text-teal-700 text-[11px] font-semibold">{p.patient_id}</p>
-                                            <p className="text-slate-500 text-[10px] truncate max-w-[180px]">{p._displayName}</p>
                                         </div>
                                         <div className="flex flex-col items-end gap-1">
                                             <span className="text-[10px] text-slate-500">{p.age}y · {p.gender}</span>

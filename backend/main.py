@@ -261,8 +261,215 @@ SAMPLE_TRIALS = [
         visits_required=10,
         telehealth_enabled=False,
         investigational_drug="Upadacitinib",
-    )
+    ),
+    # ── ONCOLOGY EXPANSION ─────────────────────────────────────────────────────
+    Trial(
+        trial_id="NCT09334444",
+        official_title="KEYNOTE-789: Pembrolizumab + Chemo for EGFR-Mutant NSCLC",
+        brief_summary="Evaluating pembrolizumab combined with platinum doublet after EGFR-TKI failure in stage IIIA-IV NSCLC.",
+        phase=TrialPhase.PHASE3,
+        status=TrialStatus.RECRUITING,
+        sponsor="MSD Oncology",
+        start_date=date(2025, 1, 15),
+        sites=[TrialSite(facility="Tata Memorial Hospital", city="Mumbai", state="Maharashtra", country="India", zip_code="400012", lat=19.0160, lng=72.8520)],
+        min_age=18,
+        max_age=120,
+        required_diagnoses=["C34.10"],
+        raw_inclusion_criteria="Adults with stage IIIA-IV non-small cell lung cancer. EGFR mutation positive. Prior progression on EGFR-TKI. ECOG 0-1. No active brain metastases.",
+        raw_exclusion_criteria="Active autoimmune disease. Prior immunotherapy. Symptomatic brain metastases.",
+        criteria_json={
+            "inclusion": [
+                {"field": "age", "min": 18, "max": 120},
+                {"field": "diagnosis", "values": ["C34.10"]},
+                {"field": "condition", "name": "EGFR mutation"},
+            ],
+            "exclusion": [
+                {"field": "condition", "name": "autoimmune disease"},
+                {"field": "condition", "name": "active brain metastases"},
+            ],
+            "raw_text": "Adults with EGFR-mutant NSCLC stage IIIA-IV. Prior TKI progression. ECOG 0-1. No active brain mets."
+        },
+        visits_required=26,
+        telehealth_enabled=False,
+        investigational_drug="Pembrolizumab + Carboplatin",
+    ),
+    Trial(
+        trial_id="NCT09445555",
+        official_title="KRYSTAL-10: Adagrasib + Cetuximab in KRAS G12C Colorectal Cancer",
+        brief_summary="Phase 3 study of adagrasib plus cetuximab in patients with KRAS G12C-mutated metastatic CRC.",
+        phase=TrialPhase.PHASE3,
+        status=TrialStatus.RECRUITING,
+        sponsor="Mirati Therapeutics",
+        start_date=date(2024, 9, 1),
+        sites=[TrialSite(facility="AIIMS", city="New Delhi", state="Delhi", country="India", zip_code="110029", lat=28.5672, lng=77.2100)],
+        min_age=18,
+        max_age=120,
+        required_diagnoses=["C18.9"],
+        raw_inclusion_criteria="Adults with KRAS G12C-mutated metastatic colorectal cancer. At least 2 prior lines of chemotherapy including FOLFOX or FOLFIRI. ECOG 0-1.",
+        raw_exclusion_criteria="Prior KRAS-directed therapy. Active hepatitis B or C. Bowel obstruction.",
+        criteria_json={
+            "inclusion": [
+                {"field": "age", "min": 18, "max": 120},
+                {"field": "diagnosis", "values": ["C18.9"]},
+                {"field": "lab", "name": "CEA", "operator": ">", "value": 5},
+            ],
+            "exclusion": [
+                {"field": "condition", "name": "bowel obstruction"},
+            ],
+            "raw_text": "KRAS G12C metastatic CRC, ≥2 prior lines. ECOG 0-1. No prior KRAS therapy."
+        },
+        visits_required=20,
+        telehealth_enabled=False,
+        investigational_drug="Adagrasib + Cetuximab",
+    ),
+    Trial(
+        trial_id="NCT09556666",
+        official_title="NAPOLI-3: Liposomal Irinotecan + Oxaliplatin in Advanced Pancreatic Cancer",
+        brief_summary="A phase 3 trial testing nal-IRI/5-FU/LV/oxaliplatin as first-line therapy in metastatic PDAC.",
+        phase=TrialPhase.PHASE3,
+        status=TrialStatus.RECRUITING,
+        sponsor="Ipsen",
+        start_date=date(2024, 7, 1),
+        sites=[TrialSite(facility="Apollo Cancer Centre", city="Chennai", state="Tamil Nadu", country="India", zip_code="600100", lat=13.0580, lng=80.2483)],
+        min_age=18,
+        max_age=120,
+        required_diagnoses=["C25.9"],
+        raw_inclusion_criteria="Histologically confirmed metastatic pancreatic ductal adenocarcinoma. No prior chemotherapy for advanced disease. ECOG 0-1. Adequate hepatic function (Bilirubin ≤ 1.5x ULN).",
+        raw_exclusion_criteria="Prior systemic chemotherapy for advanced PDAC. Active GI bleeding. Severe neuropathy.",
+        criteria_json={
+            "inclusion": [
+                {"field": "age", "min": 18, "max": 120},
+                {"field": "diagnosis", "values": ["C25.9"]},
+                {"field": "lab", "name": "CA19-9", "operator": ">", "value": 37},
+            ],
+            "exclusion": [
+                {"field": "condition", "name": "active GI bleeding"},
+            ],
+            "raw_text": "Metastatic PDAC, treatment naive. ECOG 0-1. Bilirubin ≤1.5x ULN."
+        },
+        visits_required=18,
+        telehealth_enabled=False,
+        investigational_drug="Nal-IRI + Oxaliplatin",
+    ),
+    Trial(
+        trial_id="NCT09667777",
+        official_title="TALAPRO-2: Talazoparib + Enzalutamide in mCRPC",
+        brief_summary="Phase 3 study of talazoparib plus enzalutamide versus enzalutamide monotherapy in metastatic CRPC.",
+        phase=TrialPhase.PHASE3,
+        status=TrialStatus.RECRUITING,
+        sponsor="Pfizer Oncology",
+        start_date=date(2025, 3, 1),
+        sites=[TrialSite(facility="Tata Memorial Hospital", city="Mumbai", state="Maharashtra", country="India", zip_code="400012", lat=19.0160, lng=72.8520)],
+        min_age=18,
+        max_age=120,
+        required_diagnoses=["C61"],
+        raw_inclusion_criteria="Metastatic castration-resistant prostate cancer. Prior progression on at least one ARSI (abiraterone or enzalutamide). PSA ≥ 2.0 ng/mL. Castrate testosterone levels (<50 ng/dL).",
+        raw_exclusion_criteria="Prior PARP inhibitor therapy. Symptomatic brain metastases. Active malignancy apart from CRPC.",
+        criteria_json={
+            "inclusion": [
+                {"field": "age", "min": 18, "max": 120},
+                {"field": "diagnosis", "values": ["C61"]},
+                {"field": "lab", "name": "PSA", "operator": ">", "value": 2.0},
+                {"field": "lab", "name": "Testosterone", "operator": "<", "value": 0.5},
+            ],
+            "exclusion": [],
+            "raw_text": "mCRPC, prior ARSI progression. PSA ≥2 ng/mL. Castrate testosterone."
+        },
+        visits_required=30,
+        telehealth_enabled=False,
+        investigational_drug="Talazoparib + Enzalutamide",
+    ),
+    Trial(
+        trial_id="NCT09778888",
+        official_title="HIMALAYA: Durvalumab + Tremelimumab in Unresectable HCC",
+        brief_summary="Phase 3 study of STRIDE regimen (durvalumab + single-dose tremelimumab) in first-line unresectable hepatocellular carcinoma.",
+        phase=TrialPhase.PHASE3,
+        status=TrialStatus.RECRUITING,
+        sponsor="AstraZeneca",
+        start_date=date(2024, 8, 1),
+        sites=[TrialSite(facility="Amrita Institute of Medical Sciences", city="Kochi", state="Kerala", country="India", zip_code="682041", lat=10.0261, lng=76.3089)],
+        min_age=18,
+        max_age=120,
+        required_diagnoses=["C22.0"],
+        raw_inclusion_criteria="Adults with unresectable hepatocellular carcinoma. Child-Pugh A liver function. No prior systemic therapy. ECOG 0-1. AFP may be elevated.",
+        raw_exclusion_criteria="Prior sorafenib treatment. Child-Pugh B or C. Active autoimmune disease. HIV positive.",
+        criteria_json={
+            "inclusion": [
+                {"field": "age", "min": 18, "max": 120},
+                {"field": "diagnosis", "values": ["C22.0"]},
+                {"field": "lab", "name": "AFP", "operator": ">", "value": 200},
+                {"field": "lab", "name": "Albumin", "operator": ">", "value": 2.5},
+            ],
+            "exclusion": [
+                {"field": "condition", "name": "autoimmune disease"},
+            ],
+            "raw_text": "First-line unresectable HCC. Child-Pugh A. ECOG 0-1. No prior sorafenib."
+        },
+        visits_required=22,
+        telehealth_enabled=False,
+        investigational_drug="Durvalumab + Tremelimumab",
+    ),
+    Trial(
+        trial_id="NCT09889999",
+        official_title="POLARIX: Polatuzumab Vedotin + R-CHP in DLBCL",
+        brief_summary="Phase 3 trial of polatuzumab vedotin with R-CHP compared to R-CHOP in first-line DLBCL.",
+        phase=TrialPhase.PHASE3,
+        status=TrialStatus.RECRUITING,
+        sponsor="Genentech / Roche",
+        start_date=date(2024, 10, 1),
+        sites=[TrialSite(facility="Christian Medical College", city="Vellore", state="Tamil Nadu", country="India", zip_code="632004", lat=12.9202, lng=79.1333)],
+        min_age=18,
+        max_age=80,
+        required_diagnoses=["C83.30"],
+        raw_inclusion_criteria="Adults 18-80 with untreated CD20+ DLBCL. IPI score ≥ 2. ECOG 0-2. Adequate bone marrow function. LDH may be elevated.",
+        raw_exclusion_criteria="Prior lymphoma treatment. CNS lymphoma. HIV-associated lymphoma.",
+        criteria_json={
+            "inclusion": [
+                {"field": "age", "min": 18, "max": 80},
+                {"field": "diagnosis", "values": ["C83.30"]},
+                {"field": "lab", "name": "LDH", "operator": ">", "value": 250},
+            ],
+            "exclusion": [
+                {"field": "condition", "name": "CNS lymphoma"},
+            ],
+            "raw_text": "Untreated CD20+ DLBCL. IPI ≥2. ECOG 0-2. No prior chemotherapy."
+        },
+        visits_required=8,
+        telehealth_enabled=False,
+        investigational_drug="Polatuzumab Vedotin",
+    ),
+    Trial(
+        trial_id="NCT09990000",
+        official_title="SELECT: Lenvatinib vs Sorafenib in Radioiodine-Refractory Thyroid Cancer",
+        brief_summary="Phase 3 comparative study of lenvatinib versus sorafenib in radioiodine-refractory differentiated thyroid cancer.",
+        phase=TrialPhase.PHASE3,
+        status=TrialStatus.RECRUITING,
+        sponsor="Eisai Inc.",
+        start_date=date(2024, 12, 1),
+        sites=[TrialSite(facility="All India Institute of Medical Sciences", city="New Delhi", state="Delhi", country="India", zip_code="110029", lat=28.5672, lng=77.2100)],
+        min_age=18,
+        max_age=120,
+        required_diagnoses=["C73"],
+        raw_inclusion_criteria="Adults with radioiodine-refractory differentiated thyroid cancer (papillary or follicular). Measurable disease. Suppressed TSH. ECOG 0-1.",
+        raw_exclusion_criteria="Anaplastic thyroid cancer. Prior lenvatinib or sorafenib. Active brain metastases.",
+        criteria_json={
+            "inclusion": [
+                {"field": "age", "min": 18, "max": 120},
+                {"field": "diagnosis", "values": ["C73"]},
+                {"field": "lab", "name": "TSH", "operator": "<", "value": 0.1},
+                {"field": "lab", "name": "Thyroglobulin", "operator": ">", "value": 10},
+            ],
+            "exclusion": [
+                {"field": "condition", "name": "anaplastic thyroid"},
+            ],
+            "raw_text": "Radioiodine-refractory differentiated thyroid cancer. Measurable disease. ECOG 0-1."
+        },
+        visits_required=16,
+        telehealth_enabled=True,
+        investigational_drug="Lenvatinib",
+    ),
 ]
+
 
 
 # --- Startup: seed trials table -------------------------------------------
@@ -328,6 +535,18 @@ async def find_trial_matches(patient: Patient) -> Dict[str, Any]:
     Accepts patient_id (or full patient object), returns ranked list 
     of top trials with scores and transparency data.
     """
+    # ── Ensure Patient Exists in DB before Match Results ──────────────────────
+    safe_upsert(Tables.PATIENTS, {
+        "patient_id":   patient.patient_id,
+        "age":          patient.age,
+        "gender":       patient.gender,
+        "zip_code":     patient.zip_code,
+        "diagnoses":    list(patient.diagnoses) if isinstance(patient.diagnoses, (list, tuple)) else [],
+        "labs":         dict(patient.labs) if patient.labs else {},
+        "medications":  list(patient.medications),
+        "history_text": patient.history_text,
+    })
+
     results = []
 
     for trial in SAMPLE_TRIALS:
@@ -377,7 +596,9 @@ async def find_trial_matches(patient: Patient) -> Dict[str, Any]:
         results.append(row)
 
         # ── Persist match result to Supabase ──────────────────────────────
-        safe_upsert(Tables.MATCH_RESULTS, {
+        import uuid
+        safe_insert(Tables.MATCH_RESULTS, {
+            "id":                 str(uuid.uuid4()),
             "patient_id":         patient.patient_id,
             "trial_id":           trial.trial_id,
             "match_score":        row["match_score"],
@@ -386,7 +607,7 @@ async def find_trial_matches(patient: Patient) -> Dict[str, Any]:
             "criteria_breakdown": row["criteria_breakdown"],
             "missing_data":       row["missing_data"],
             "llm_explanation":    row["llm_explanation"],
-        })
+        })  # safe_insert silently swallows duplicate key errors
 
     # Sort: eligible first, then by score descending
     sorted_results = sorted(
@@ -394,6 +615,22 @@ async def find_trial_matches(patient: Patient) -> Dict[str, Any]:
         key=lambda x: (x["eligible"], x["match_score"]),
         reverse=True
     )
+
+    # ── Apply location filters ──────────────────────────────────────────────────
+    radius = patient.filter_radius_miles if patient.filter_radius_miles is not None else 9999
+    hpsa_only = patient.filter_hpsa_only or False
+
+    if radius < 9999:
+        filtered = []
+        for r in sorted_results:
+            dist = r.get("site_info", {}).get("distance_miles")
+            # If distance_miles is not available, include the trial (don't exclude on missing data)
+            if dist is None or dist <= radius:
+                filtered.append(r)
+        sorted_results = filtered
+
+    if hpsa_only:
+        sorted_results = [r for r in sorted_results if r.get("hpsa_flagged", False)]
 
     return {"patient_id": patient.patient_id, "matches": sorted_results}
 
