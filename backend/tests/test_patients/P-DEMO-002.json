@@ -1,0 +1,26 @@
+{
+  "patient_id": "P-DEMO-002",
+  "age": 63,
+  "gender": "female",
+  "zip_code": "94143",
+  "diagnoses": [
+    "N18.3"
+  ],
+  "labs": {
+    "eGFR": {
+      "value": 42,
+      "unit": "mL/min",
+      "observation_date": "2026-01-22"
+    },
+    "Creatinine": {
+      "value": 1.9,
+      "unit": "mg/dL",
+      "observation_date": "2026-01-22"
+    }
+  },
+  "medications": [
+    "Lisinopril 10mg",
+    "Furosemide 40mg"
+  ],
+  "history_text": "63-year-old female with Stage 3 CKD secondary to hypertension. eGFR is 42. No diabetes. Currently on ACE inhibitor. Managed at UCSF nephrology clinic."
+}

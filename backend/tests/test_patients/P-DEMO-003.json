@@ -1,0 +1,21 @@
+{
+  "patient_id": "P-DEMO-003",
+  "age": 28,
+  "gender": "female",
+  "zip_code": "10016",
+  "diagnoses": [
+    "J45.909"
+  ],
+  "labs": {
+    "FEV1": {
+      "value": 62,
+      "unit": "% predicted",
+      "observation_date": "2026-03-01"
+    }
+  },
+  "medications": [
+    "Fluticasone inhaler 250mcg BD",
+    "Salbutamol 100mcg PRN"
+  ],
+  "history_text": "28-year-old non-smoking female with persistent moderate-to-severe asthma since childhood. FEV1 at 62% predicted. No COPD. Not pregnant. Not a current smoker."
+}
